@@ -216,8 +216,7 @@ int Generator::appendSortedNames(Text& text, const ClassNode* cn, const QList<Re
     r = rc.constBegin();
     while (r != rc.constEnd()) {
         ClassNode* rcn = (*r).node_;
-        if (rcn && rcn->access() == Node::Public &&
-            !rcn->isInternal() && !rcn->doc().isEmpty()) {
+        if (rcn && rcn->isInAPI()) {
             Text className;
             appendFullName(className, rcn, cn);
             classMap[className.toString().toLower()] = className;
@@ -1294,12 +1293,27 @@ void Generator::generateReimplementsClause(const FunctionNode *fn, CodeMarker *m
             ClassNode* cn = static_cast<ClassNode*>(fn->parent());
             const FunctionNode *overrides = cn->findOverriddenFunction(fn);
             if (overrides && !overrides->isPrivate() && !overrides->parent()->isPrivate()) {
+                if (overrides->hasDoc()) {
+                    Text text;
+                    text << Atom::ParaLeft << "Reimplements: ";
+                    QString fullName =  overrides->parent()->name() + "::" + overrides->signature(false, true);
+                    appendFullName(text, overrides->parent(), fullName, overrides);
+                    text << "." << Atom::ParaRight;
+                    generateText(text, fn, marker);
+                    return;
+                }
+            }
+            const PropertyNode* sameName = cn->findOverriddenProperty(fn);
+            if (sameName && sameName->hasDoc()) {
                 Text text;
-                text << Atom::ParaLeft << "Reimplements: ";
-                QString fullName =  overrides->parent()->name() + "::" + overrides->signature(false, true);
-                appendFullName(text, overrides->parent(), fullName, overrides);
+                text << Atom::ParaLeft << "Reimplements an access function for property: ";
+                QString fullName =  sameName->parent()->name() + "::" + sameName->name();
+                appendFullName(text, sameName->parent(), fullName, sameName);
                 text << "." << Atom::ParaRight;
                 generateText(text, fn, marker);
+            } else {
+                fn->doc().location().warning(tr("Illegal \\reimp; no documented virtual function for %1")
+                                             .arg(fn->plainSignature()));
             }
         }
     }

@@ -307,6 +307,7 @@ Node::Node(NodeType type, Aggregate *parent, const QString& name)
       status_(Active),
       indexNodeFlag_(false),
       relatedNonmember_(false),
+      hadDoc_(false),
       parent_(parent),
       sharedCommentNode_(nullptr),
       name_(name)
@@ -1084,7 +1085,7 @@ FunctionNode *Aggregate::findFunctionChild(const QString &name, const Parameters
 /*!
   Find the function node that is a child of this node, such
   that the function described has the same name and signature
-  as the function described by the \a clone node.
+  as the function described by the function node \a clone.
  */
 FunctionNode *Aggregate::findFunctionChild(const FunctionNode *clone)
 {
@@ -1492,7 +1493,7 @@ QString Node::physicalModuleName() const
 
 /*!
   If this node has a child that is a QML property or JS property
-  named \a n, return a pointer to that child. Otherwise return 0.
+  named \a n, return a pointer to that child. Otherwise, return \nullptr.
  */
 QmlPropertyNode* Aggregate::hasQmlProperty(const QString& n) const
 {
@@ -1590,7 +1591,7 @@ bool NamespaceNode::isDocumentedHere() const
 bool NamespaceNode::hasDocumentedChildren() const
 {
     foreach (Node *n, children_) {
-        if (n->hasDoc() && !n->isPrivate() && !n->isInternal())
+        if (n->isInAPI())
             return true;
     }
     return false;
@@ -1604,7 +1605,7 @@ bool NamespaceNode::hasDocumentedChildren() const
 void NamespaceNode::reportDocumentedChildrenInUndocumentedNamespace() const
 {
     foreach (Node *n, children_) {
-        if (n->hasDoc() && !n->isPrivate() && !n->isInternal()) {
+        if (n->isInAPI()) {
             QString msg1 = n->name();
             if (n->isFunction())
                 msg1 += "()";
@@ -1622,7 +1623,7 @@ void NamespaceNode::reportDocumentedChildrenInUndocumentedNamespace() const
  */
 bool NamespaceNode::docMustBeGenerated() const
 {
-    if (hasDoc() && !isInternal() && !isPrivate())
+    if (isInAPI())
         return true;
     return (hasDocumentedChildren() ? true : false);
 }
@@ -1702,8 +1703,37 @@ void ClassNode::addUnresolvedUsingClause(const QString& signature)
 }
 
 /*!
+  A base class of this class node was private or internal.
+  That node's list of \a bases is traversed in this function.
+  Each of its public base classes is promoted to be a base
+  class of this node for documentation purposes. For each
+  private or internal class node in \a bases, this function
+  is called recursively with the list of base classes from
+  that private or internal class node.
  */
-void ClassNode::fixBaseClasses()
+void ClassNode::promotePublicBases(const QList<RelatedClass>& bases)
+{
+    if (!bases.isEmpty()) {
+        for (int i = bases.size() - 1; i >= 0; --i) {
+            ClassNode* bc = bases.at(i).node_;
+            if (bc == nullptr)
+                bc = QDocDatabase::qdocDB()->findClassNode(bases.at(i).path_);
+            if (bc != nullptr) {
+                if (bc->isPrivate() || bc->isInternal())
+                    promotePublicBases(bc->baseClasses());
+                else
+                    bases_.append(bases.at(i));
+            }
+        }
+    }
+}
+
+/*!
+  Remove private and internal bases classes from this class's list
+  of base classes. When a base class is removed from the list, add
+  its base classes to this class's list of base classes.
+ */
+void ClassNode::removePrivateAndInternalBases()
 {
     int i;
     i = 0;
@@ -1714,13 +1744,11 @@ void ClassNode::fixBaseClasses()
         ClassNode* bc = bases_.at(i).node_;
         if (bc == nullptr)
             bc = QDocDatabase::qdocDB()->findClassNode(bases_.at(i).path_);
-        if (bc != nullptr && (bc->access() == Node::Private || found.contains(bc))) {
+        if (bc != nullptr && (bc->isPrivate() || bc->isInternal() || found.contains(bc))) {
             RelatedClass rc = bases_.at(i);
             bases_.removeAt(i);
             ignoredBases_.append(rc);
-            const QList<RelatedClass> &bb = bc->baseClasses();
-            for (int j = bb.size() - 1; j >= 0; --j)
-                bases_.insert(i, bb.at(j));
+            promotePublicBases(bc->baseClasses());
         }
         else {
             ++i;
@@ -1731,7 +1759,7 @@ void ClassNode::fixBaseClasses()
     i = 0;
     while (i < derived_.size()) {
         ClassNode* dc = derived_.at(i).node_;
-        if (dc != nullptr && dc->access() == Node::Private) {
+        if (dc != nullptr && (dc->isPrivate() || dc->isInternal())) {
             derived_.removeAt(i);
             const QList<RelatedClass> &dd = dc->derivedClasses();
             for (int j = dd.size() - 1; j >= 0; --j)
@@ -1744,9 +1772,8 @@ void ClassNode::fixBaseClasses()
 }
 
 /*!
-  Not sure why this is needed.
  */
-void ClassNode::fixPropertyUsingBaseClasses(PropertyNode* pn)
+void ClassNode::resolvePropertyOverriddenFromPtrs(PropertyNode* pn)
 {
     QList<RelatedClass>::const_iterator bc = baseClasses().constBegin();
     while (bc != baseClasses().constEnd()) {
@@ -1755,11 +1782,11 @@ void ClassNode::fixPropertyUsingBaseClasses(PropertyNode* pn)
             Node* n = cn->findNonfunctionChild(pn->name(), &Node::isProperty);
             if (n) {
                 PropertyNode* baseProperty = static_cast<PropertyNode*>(n);
-                cn->fixPropertyUsingBaseClasses(baseProperty);
+                cn->resolvePropertyOverriddenFromPtrs(baseProperty);
                 pn->setOverriddenFrom(baseProperty);
             }
             else
-                cn->fixPropertyUsingBaseClasses(pn);
+                cn->resolvePropertyOverriddenFromPtrs(pn);
         }
         ++bc;
     }
@@ -1839,8 +1866,9 @@ QmlTypeNode* ClassNode::findQmlBaseNode()
   \a fn is an overriding function in this class or in a class
   derived from this class. Find the node for the function that
   \a fn overrides in this class's children or in one of this
-  class's base classes. Return a pointer to the overridden
-  function or return 0.
+  class's base classes.
+
+  \returns a pointer to the overridden function, or \nullptr.
 
   This should be revised because clang provides the path to the
   overridden function. mws 15/12/2018
@@ -1856,10 +1884,49 @@ FunctionNode* ClassNode::findOverriddenFunction(const FunctionNode* fn)
         }
         if (cn != nullptr) {
             FunctionNode *result = cn->findFunctionChild(fn);
-            if (result != nullptr && !result->isNonvirtual())
+            if (result != nullptr && !result->isInternal() && !result->isNonvirtual() && result->hasDoc())
                 return result;
             result = cn->findOverriddenFunction(fn);
             if (result != nullptr && !result->isNonvirtual())
+                return result;
+        }
+        ++bc;
+    }
+    return nullptr;
+}
+
+/*!
+  \a fn is an overriding function in this class or in a class
+  derived from this class. Find the node for the property that
+  \a fn overrides in this class's children or in one of this
+  class's base classes.
+
+  \returns a pointer to the overridden function, or \nullptr.
+ */
+PropertyNode* ClassNode::findOverriddenProperty(const FunctionNode* fn)
+{
+    QList<RelatedClass>::Iterator bc = bases_.begin();
+    while (bc != bases_.end()) {
+        ClassNode *cn = bc->node_;
+        if (cn == nullptr) {
+            cn = QDocDatabase::qdocDB()->findClassNode(bc->path_);
+            bc->node_ = cn;
+        }
+        if (cn != nullptr) {
+            const NodeList &children = cn->childNodes();
+            NodeList::const_iterator i = children.begin();
+            while (i != children.end()) {
+                if ((*i)->isProperty()) {
+                    PropertyNode *pn = static_cast<PropertyNode*>(*i);
+                    if (pn->name() == fn->name() || pn->hasAccessFunction(fn->name())) {
+                        if (pn->hasDoc())
+                            return pn;
+                    }
+                }
+                i++;
+            }
+            PropertyNode *result = cn->findOverriddenProperty(fn);
+            if (result != nullptr)
                 return result;
         }
         ++bc;
@@ -1875,15 +1942,11 @@ FunctionNode* ClassNode::findOverriddenFunction(const FunctionNode* fn)
  */
 bool ClassNode::docMustBeGenerated() const
 {
-    if (isInternal() || isPrivate() || isDontDocument() ||
-        declLocation().fileName().endsWith(QLatin1String("_p.h")))
+    if (!hasDoc() || isPrivate() || isInternal() || isDontDocument())
         return false;
-    if (count() == 0)
+    if (declLocation().fileName().endsWith(QLatin1String("_p.h")) && !hasDoc())
         return false;
-    if (name().contains(QLatin1String("Private")))
-        return false;
-    if (functionCount_ == 0)
-        return false;
+
     return true;
 }
 
@@ -1901,11 +1964,28 @@ HeaderNode::HeaderNode(Aggregate* parent, const QString& name) : Aggregate(Heade
         Aggregate::addIncludeFile(name);
 }
 
+/*!
+  Returns true if this header file node is not private and
+  contains at least one public child node with documentation.
+ */
 bool HeaderNode::docMustBeGenerated() const
 {
-    if (!hasDoc() || isInternal() || isDontDocument())
-        return false;
-    return true;
+    if (isInAPI())
+        return true;
+    return (hasDocumentedChildren() ? true : false);
+}
+
+/*!
+  Returns true if this header file node contains at least one
+  child that has documentation and is not private or internal.
+ */
+bool HeaderNode::hasDocumentedChildren() const
+{
+    foreach (Node *n, children_) {
+        if (n->isInAPI())
+            return true;
+    }
+    return false;
 }
 
 /*!
@@ -2717,6 +2797,38 @@ QString PropertyNode::qualifiedDataType() const
     else {
         return type_;
     }
+}
+
+/*!
+  Returns true if this property has an access function named \a name.
+ */
+bool PropertyNode::hasAccessFunction(const QString &name) const
+{
+    NodeList::const_iterator i = getters().begin();
+    while (i != getters().end()) {
+        if ((*i)->name() == name)
+            return true;
+        ++i;
+    }
+    i = setters().begin();
+    while (i != setters().end()) {
+        if ((*i)->name() == name)
+            return true;
+        ++i;
+    }
+    i = resetters().begin();
+    while (i != resetters().end()) {
+        if ((*i)->name() == name)
+            return true;
+        ++i;
+    }
+    i = notifiers().begin();
+    while (i != notifiers().end()) {
+        if ((*i)->name() == name)
+            return true;
+        ++i;
+    }
+    return false;
 }
 
 bool QmlTypeNode::qmlOnly = false;

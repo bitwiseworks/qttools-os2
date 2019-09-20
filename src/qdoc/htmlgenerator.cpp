@@ -46,6 +46,7 @@
 #include <qtextcodec.h>
 #include <quuid.h>
 #include <qmap.h>
+#include <QtCore/qversionnumber.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -1204,11 +1205,8 @@ int HtmlGenerator::generateAtom(const Atom *atom, const Node *relative, CodeMark
         break;
     case Atom::SectionHeadingLeft: {
         int unit = atom->string().toInt() + hOffset(relative);
-        out() << "<h" + QString::number(unit) + QLatin1Char(' ');
-        if (unit < 3) {
-            out() << "id=\"" << Doc::canonicalTitle(Text::sectionHeading(atom).toString()) << "\"";
-        }
-        out() << '>';
+        out() << "<h" + QString::number(unit) + QLatin1Char(' ')
+              << "id=\"" << Doc::canonicalTitle(Text::sectionHeading(atom).toString()) << "\">";
         inSectionHeading_ = true;
         break;
     }
@@ -2109,8 +2107,6 @@ void HtmlGenerator::generateHeader(const QString& title,
     if (node && !node->doc().location().isEmpty())
         out() << "<!-- " << node->doc().location().fileName() << " -->\n";
 
-    QString projectVersion = qdb_->version();
-
     //determine the rest of the <title> element content: "title | titleSuffix version"
     QString titleSuffix;
     if (!landingtitle.isEmpty()) {
@@ -2132,14 +2128,8 @@ void HtmlGenerator::generateHeader(const QString& title,
         //default: "title | Qt version"
         titleSuffix = QLatin1String("Qt ");
 
-    //for pages that duplicate the title and suffix (landing pages, home pages,
-    // and module landing pages, clear the duplicate
     if (title == titleSuffix)
         titleSuffix.clear();
-
-    //for pages that duplicate the version, clear the duplicate
-    if (title.contains(projectVersion) || titleSuffix.contains(projectVersion))
-        projectVersion.clear();
 
     QString divider;
     if (!titleSuffix.isEmpty() && !title.isEmpty())
@@ -2151,9 +2141,18 @@ void HtmlGenerator::generateHeader(const QString& title,
           << divider
           << titleSuffix;
 
-    if (!projectVersion.isEmpty())
-        out() << QLatin1Char(' ') << projectVersion;
-
+    // append a full version to the suffix if neither suffix nor title
+    // include (a prefix of) version information
+    QVersionNumber projectVersion = QVersionNumber::fromString(qdb_->version());
+    if (!projectVersion.isNull()) {
+        QVersionNumber titleVersion;
+        QRegExp re("\\d+\\.\\d+");
+        const QString &versionedTitle = titleSuffix.isEmpty() ? title : titleSuffix;
+        if (versionedTitle.contains(re))
+            titleVersion = QVersionNumber::fromString(re.cap());
+        if (titleVersion.isNull() || !titleVersion.isPrefixOf(projectVersion))
+            out() << QLatin1Char(' ') << projectVersion.toString();
+    }
     out() << "</title>\n";
 
     // Include style sheet and script links.
@@ -2918,7 +2917,7 @@ void HtmlGenerator::generateClassHierarchy(const Node *relative, NodeMap& classM
 
             NodeMap newTop;
             foreach (const RelatedClass &d, child->derivedClasses()) {
-                if (d.node_ && !d.isPrivate() && !d.node_->isInternal() && d.node_->hasDoc())
+                if (d.node_ && d.node_->isInAPI())
                     newTop.insert(d.node_->name(), d.node_);
             }
             if (!newTop.isEmpty()) {
@@ -3051,11 +3050,11 @@ void HtmlGenerator::generateCompactList(ListType listType,
     NodeMultiMap::ConstIterator c = nmm.constBegin();
     while (c != nmm.constEnd()) {
         QStringList pieces = c.key().split("::");
-        QString key;
         int idx = commonPrefixLen;
         if (idx > 0 && !pieces.last().startsWith(commonPrefix, Qt::CaseInsensitive))
             idx = 0;
-        key = pieces.last().mid(idx).toLower();
+        QString last = pieces.last().toLower();
+        QString key = last.mid(idx);
 
         int paragraphNr = NumParagraphs - 1;
 
@@ -3068,7 +3067,7 @@ void HtmlGenerator::generateCompactList(ListType listType,
 
         paragraphName[paragraphNr] = key[0].toUpper();
         usedParagraphNames.insert(key[0].toLower().cell());
-        paragraph[paragraphNr].insert(c.key(), c.value());
+        paragraph[paragraphNr].insert(last, c.value());
         ++c;
     }
 
