@@ -34,6 +34,11 @@
 #include <iostream>
 #include <string>
 
+#ifdef Q_OS_OS2 // incomplete wide char support in LIBC/GCC, https://github.com/bitwiseworks/libc/issues/8
+#define toStdWString toStdString
+#define wcout cout
+#endif
+
 QT_USE_NAMESPACE
 
 int main(int argc, char **argv)
