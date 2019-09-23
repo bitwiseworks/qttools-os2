@@ -48,7 +48,7 @@
 # include <qthreadpool.h>
 #endif
 
-#ifdef Q_OS_UNIX
+#ifdef Q_OS_UNIXLIKE
 #include <unistd.h>
 #include <sys/utsname.h>
 #else
@@ -63,7 +63,11 @@
 #define QT_PCLOSE _pclose
 #else
 #define QT_POPEN popen
+#ifdef Q_OS_DOSLIKE
+#define QT_POPEN_READ "rb"
+#else
 #define QT_POPEN_READ "r"
+#endif
 #define QT_PCLOSE pclose
 #endif
 
@@ -79,7 +83,7 @@ QMakeGlobals::QMakeGlobals()
 #ifdef PROEVALUATOR_DEBUG
     debugLevel = 0;
 #endif
-#ifdef Q_OS_WIN
+#ifdef Q_OS_DOSLIKE
     dirlist_sep = QLatin1Char(';');
     dir_sep = QLatin1Char('\\');
 #else

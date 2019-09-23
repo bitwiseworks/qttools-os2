@@ -265,7 +265,7 @@ void CmdLineParser::showMessage(const QString &msg, bool error)
     TRACE_OBJ
     if (m_quiet)
         return;
-#ifdef Q_OS_WIN
+#ifdef Q_OS_DOSLIKE
     QString message = QLatin1String("<pre>") % msg % QLatin1String("</pre>");
     if (error)
         QMessageBox::critical(0, tr("Error"), message);

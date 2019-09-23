@@ -219,7 +219,7 @@ void tst_lupdate::good_data()
     QDir parsingDir(m_basePath + "good");
     QStringList dirs = parsingDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
-#ifndef Q_OS_WIN
+#ifndef Q_OS_DOSLIKE
     dirs.removeAll(QLatin1String("backslashes"));
 #endif
 

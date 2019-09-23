@@ -31,8 +31,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__OS2__)
 #include <process.h>
+#ifdef __OS2__
+#define _P_WAIT P_WAIT
+#define _spawnvp spawnvp
+#endif
 #else
 #include <unistd.h>
 #endif
@@ -40,7 +44,7 @@
 static const char collectionGeneratorName[] = "qcollectiongenerator";
 static const char helpGeneratorName[] = "qhelpgenerator";
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__OS2__)
 static const char separator = '\\';
 #else
 static const char separator = '/';
@@ -96,7 +100,7 @@ int main(int argc, char *argv[])
            currentNameSize - pathOffset - collectionGeneratorNameSize + 1);
 
     argv[0] = newPath;
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__OS2__)
     const intptr_t ret = _spawnvp(_P_WAIT, newPath, argv);
     if (ret == -1) {
         fprintf(stderr, "Error while executing \"%s\" tool.\n", newPath);

@@ -55,7 +55,7 @@
 
 #include <algorithm>
 
-#ifdef Q_OS_UNIX
+#ifdef Q_OS_UNIXLIKE
 #include <time.h>
 #include <errno.h>
 #include <unistd.h>
@@ -75,7 +75,11 @@
 #define QT_PCLOSE _pclose
 #else
 #define QT_POPEN popen
+#ifdef Q_OS_OS2
+#define QT_POPEN_READ "rb"
+#else
 #define QT_POPEN_READ "r"
+#endif
 #define QT_PCLOSE pclose
 #endif
 
@@ -501,7 +505,14 @@ void QMakeEvaluator::runProcess(QProcess *proc, const QString &command) const
     proc->setNativeArguments(QLatin1String("/v:off /s /c \"") + command + QLatin1Char('"'));
     proc->start(m_option->getEnv(QLatin1String("COMSPEC")), QStringList());
 # else
-    proc->start(QLatin1String("/bin/sh"), QStringList() << QLatin1String("-c") << command);
+#  ifdef Q_OS_OS2
+    QString shell = m_option->getEnv(QLatin1String("SHELL"));
+    if (shell.isEmpty())
+        shell = QLatin1String("/@unixroot/bin/sh");
+#  else
+    const QString shell = QLatin1String("/bin/sh");
+#  endif
+    proc->start(shell, QStringList() << QLatin1String("-c") << command);
 # endif
     proc->waitForFinished(-1);
 }
@@ -528,7 +539,7 @@ QByteArray QMakeEvaluator::getCommandOutput(const QString &args, int *exitCode) 
     }
 # endif
     out = proc.readAllStandardOutput();
-# ifdef Q_OS_WIN
+# ifdef Q_OS_DOSLIKE
     // FIXME: Qt's line end conversion on sequential files should really be fixed
     out.replace("\r\n", "\n");
 # endif
@@ -550,7 +561,7 @@ QByteArray QMakeEvaluator::getCommandOutput(const QString &args, int *exitCode) 
         *exitCode = WIFEXITED(ec) ? WEXITSTATUS(ec) : -1;
 # endif
     }
-# ifdef Q_OS_WIN
+# ifdef Q_OS_DOSLIKE
     out.replace("\r\n", "\n");
 # endif
 #endif
@@ -1168,7 +1179,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateBuiltinExpand(
     case E_SYSTEM_PATH: {
         ProStringRwUser u1(args.at(0), m_tmp1);
         QString rstr = u1.str();
-#ifdef Q_OS_WIN
+#ifdef Q_OS_DOSLIKE
         rstr.replace(QLatin1Char('/'), QLatin1Char('\\'));
 #else
         rstr.replace(QLatin1Char('\\'), QLatin1Char('/'));

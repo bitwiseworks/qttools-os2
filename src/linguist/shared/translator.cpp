@@ -33,10 +33,14 @@
 #include <iostream>
 
 #include <stdio.h>
-#ifdef Q_OS_WIN
+#ifdef Q_OS_DOSLIKE
 // required for _setmode, to avoid _O_TEXT streams...
 #  include <io.h> // for _setmode
 #  include <fcntl.h> // for _O_BINARY
+#  ifdef Q_OS_OS2
+#    define _setmode setmode
+#    define _O_BINARY O_BINARY
+#  endif
 #endif
 
 #include <QtCore/QDebug>
@@ -274,7 +278,7 @@ bool Translator::load(const QString &filename, ConversionData &cd, const QString
 
     QFile file;
     if (filename.isEmpty() || filename == QLatin1String("-")) {
-#ifdef Q_OS_WIN
+#ifdef Q_OS_DOSLIKE
         // QFile is broken for text files
         ::_setmode(0, _O_BINARY);
 #endif
@@ -314,7 +318,7 @@ bool Translator::save(const QString &filename, ConversionData &cd, const QString
 {
     QFile file;
     if (filename.isEmpty() || filename == QLatin1String("-")) {
-#ifdef Q_OS_WIN
+#ifdef Q_OS_DOSLIKE
         // QFile is broken for text files
         ::_setmode(1, _O_BINARY);
 #endif

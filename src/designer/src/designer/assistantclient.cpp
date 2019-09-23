@@ -106,7 +106,7 @@ QString AssistantClient::binary()
     app += QStringLiteral("Assistant.app/Contents/MacOS/Assistant");
 #endif
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_DOSLIKE)
     app += QStringLiteral(".exe");
 #endif
 

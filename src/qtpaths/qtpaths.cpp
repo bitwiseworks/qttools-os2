@@ -150,7 +150,7 @@ int main(int argc, char **argv)
     QCoreApplication app(argc, argv);
     app.setApplicationVersion("1.0");
 
-#ifdef Q_OS_WIN
+#ifdef Q_OS_DOSLIKE
     const QLatin1Char pathsep(';');
 #else
     const QLatin1Char pathsep(':');

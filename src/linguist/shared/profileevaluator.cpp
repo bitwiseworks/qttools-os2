@@ -93,7 +93,7 @@ QStringList ProFileEvaluator::values(const QString &variableName, const ProFile 
 QString ProFileEvaluator::sysrootify(const QString &path, const QString &baseDir) const
 {
     ProFileGlobals *option = static_cast<ProFileGlobals *>(d->m_option);
-#ifdef Q_OS_WIN
+#ifdef Q_OS_DOSLIKE
     Qt::CaseSensitivity cs = Qt::CaseInsensitive;
 #else
     Qt::CaseSensitivity cs = Qt::CaseSensitive;

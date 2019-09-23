@@ -47,7 +47,7 @@ private:
 void tst_QtDiag::initTestCase()
 {
     QString binary = QLibraryInfo::location(QLibraryInfo::BinariesPath) + QStringLiteral("/qtdiag");
-#  ifdef Q_OS_WIN
+#  ifdef Q_OS_DOSLIKE
     binary += QStringLiteral(".exe");
 #  endif
     const QFileInfo fi(binary);

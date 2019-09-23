@@ -50,7 +50,7 @@
 # include <qthreadpool.h>
 #endif
 
-#ifdef Q_OS_UNIX
+#ifdef Q_OS_UNIXLIKE
 #include <unistd.h>
 #include <sys/utsname.h>
 #  ifdef Q_OS_BSD4
@@ -1090,14 +1090,19 @@ void QMakeEvaluator::loadDefaults()
                 vcInstallDir,
                 m_option->getEnv(QLatin1String("PATH")));
 # endif
-#elif defined(Q_OS_UNIX)
+#elif defined(Q_OS_UNIXLIKE)
     struct utsname name;
     if (uname(&name) != -1) {
         vars[ProKey("QMAKE_HOST.os")] << ProString(name.sysname);
         vars[ProKey("QMAKE_HOST.name")] << ProString(QString::fromLocal8Bit(name.nodename));
         vars[ProKey("QMAKE_HOST.version")] << ProString(name.release);
         vars[ProKey("QMAKE_HOST.version_string")] << ProString(name.version);
+#ifdef Q_OS_OS2
+        // uname returns "i386" in .machine, use "x86" for compatibility with Qt4
+        vars[ProKey("QMAKE_HOST.arch")] << ProString("x86");
+#else
         vars[ProKey("QMAKE_HOST.arch")] << ProString(name.machine);
+#endif
     }
 #endif
 
