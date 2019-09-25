@@ -1,4 +1,5 @@
 TARGET = QtDesignerComponents
+os2:TARGET_SHORT = QtDsgC
 MODULE = designercomponents
 
 QT = core gui-private widgets-private designer-private

@@ -1,4 +1,5 @@
 TARGET = QtDesigner
+os2:TARGET_SHORT = QtDsgn
 MODULE = designer
 
 QT = core-private gui-private widgets-private xml uiplugin

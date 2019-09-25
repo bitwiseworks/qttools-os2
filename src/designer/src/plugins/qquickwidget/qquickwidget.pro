@@ -1,4 +1,5 @@
 TARGET      = qquickwidget
+os2:TARGET_SHORT = qqwgt
 QT         += widgets quickwidgets
 
 PLUGIN_CLASS_NAME = QQuickWidgetPlugin

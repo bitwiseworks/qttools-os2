@@ -1,4 +1,5 @@
 TARGET      = qwebview
+os2:TARGET_SHORT = qwebvw
 QT         += widgets webkitwidgets
 
 PLUGIN_CLASS_NAME = QWebViewPlugin

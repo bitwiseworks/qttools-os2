@@ -2,6 +2,7 @@ QTDIR_build {
 # This is only for the Qt build. Do not use externally. We mean it.
 PLUGIN_TYPE = designer
 PLUGIN_CLASS_NAME = MultiPageWidgetPlugin
+os2:TARGET_SHORT = ctrext
 load(qt_plugin)
 CONFIG += install_ok
 } else {
@@ -13,6 +14,8 @@ CONFIG  += plugin
 #! [0]
 
 TARGET   = $$qtLibraryTarget($$TARGET)
+
+os2:TARGET_SHORT = $$qtLibraryTarget(ctrext)
 
 target.path = $$[QT_INSTALL_PLUGINS]/designer
 INSTALLS += target
