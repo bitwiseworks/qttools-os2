@@ -32,3 +32,8 @@ cross_compile:SUBDIRS -= qhelpcontentmodel qhelpenginecore qhelpindexmodel qhelp
 !qtConfig(process): SUBDIRS -= qtattributionsscanner linguist qtdiag windeployqt
 android|qnx: SUBDIRS -= qtdiag
 !win32|winrt: SUBDIRS -= windeployqt
+
+# Be in line with src/qdoc/qdoc.pro
+include($$OUT_PWD/../../src/qdoc/qtqdoc-config.pri)
+QT_FOR_CONFIG += qdoc-private
+!qtConfig(qdoc)|!qtConfig(thread): SUBDIRS -= qdoc

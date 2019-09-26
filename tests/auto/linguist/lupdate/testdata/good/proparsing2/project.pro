@@ -28,6 +28,6 @@ SOURCES += $$Q3
 # SOURCES += [x/variable, with, spaces/z]
 
 win32: SOURCES += $$system(type files-cc.txt)
-unix: SOURCES += $$system(cat files-cc.txt)
+unix|os2: SOURCES += $$system(cat files-cc.txt)
 
 TRANSLATIONS = project.ts
