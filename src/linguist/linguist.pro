@@ -17,7 +17,7 @@ qtNomakeTools( \
     linguist \
 )
 
-equals(QMAKE_HOST.os, Windows): CMAKE_BIN_SUFFIX = ".exe"
+equals(QMAKE_HOST.os, Windows)|equals(QMAKE_HOST.os, OS/2): CMAKE_BIN_SUFFIX = ".exe"
 
 load(cmake_functions)
 
