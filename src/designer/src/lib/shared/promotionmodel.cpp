@@ -39,7 +39,7 @@
 QT_BEGIN_NAMESPACE
 
 namespace {
-    typedef QList<QStandardItem *> StandardItemList;
+    using StandardItemList = QList<QStandardItem *>;
 
     // Model columns.
     enum { ClassNameColumn, IncludeFileColumn, IncludeTypeColumn, ReferencedColumn, NumColumns };
@@ -74,7 +74,7 @@ namespace {
         data.promotedItem = dbItem;
         data.referenced = referenced;
 
-        const QVariant userData = qVariantFromValue(data);
+        const QVariant userData = QVariant::fromValue(data);
 
         StandardItemList rc =  modelRow();
         // name
@@ -120,7 +120,7 @@ namespace qdesigner_internal {
     }
 
     void PromotionModel::updateFromWidgetDatabase() {
-        typedef QDesignerPromotionInterface::PromotedClasses PromotedClasses;
+        using PromotedClasses = QDesignerPromotionInterface::PromotedClasses;
 
         clear();
         initializeHeaders();
@@ -129,13 +129,13 @@ namespace qdesigner_internal {
         // Set the item index as user data on the item.
         const PromotedClasses promotedClasses = m_core->promotion()->promotedClasses();
 
-        if (promotedClasses.empty())
+        if (promotedClasses.isEmpty())
             return;
 
         const QSet<QString> usedPromotedClasses = m_core->promotion()->referencedPromotedClassNames();
 
-        QDesignerWidgetDataBaseItemInterface *baseClass = 0;
-        QStandardItem *baseItem = 0;
+        QDesignerWidgetDataBaseItemInterface *baseClass = nullptr;
+        QStandardItem *baseItem = nullptr;
 
         const PromotedClasses::const_iterator bcend = promotedClasses.constEnd();
         for (PromotedClasses::const_iterator it = promotedClasses.constBegin(); it !=  bcend; ++it) {
@@ -143,7 +143,7 @@ namespace qdesigner_internal {
             if (baseClass !=  it->baseItem) {
                 baseClass =  it->baseItem;
                 const StandardItemList baseRow = baseModelRow(it->baseItem);
-                baseItem = baseRow.front();
+                baseItem = baseRow.constFirst();
                 appendRow(baseRow);
             }
             Q_ASSERT(baseItem);
@@ -187,7 +187,7 @@ namespace qdesigner_internal {
 
     QModelIndex PromotionModel::indexOfClass(const QString &className) const {
         const StandardItemList matches = findItems (className, Qt::MatchFixedString|Qt::MatchCaseSensitive|Qt::MatchRecursive);
-        return matches.empty() ? QModelIndex() : indexFromItem (matches.front());
+        return matches.isEmpty() ? QModelIndex() : indexFromItem (matches.constFirst());
     }
 } // namespace qdesigner_internal
 

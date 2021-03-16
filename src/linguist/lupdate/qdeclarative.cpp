@@ -39,6 +39,7 @@
 #include <private/qqmljslexer_p.h>
 #include <private/qqmljsastvisitor_p.h>
 #include <private/qqmljsast_p.h>
+#include <private/qqmlapiversion_p.h>
 
 #include <QCoreApplication>
 #include <QFile>
@@ -52,9 +53,11 @@
 
 QT_BEGIN_NAMESPACE
 
-class LU {
-    Q_DECLARE_TR_FUNCTIONS(LUpdate)
-};
+#if Q_QML_PRIVATE_API_VERSION < 8
+namespace QQmlJS {
+    using SourceLocation = AST::SourceLocation;
+}
+#endif
 
 using namespace QQmlJS;
 
@@ -110,6 +113,10 @@ protected:
             case TrFunctionAliasManager::Function_QT_TR_NOOP: {
                 if (!node->arguments) {
                     yyMsg(identLineNo) << qPrintable(LU::tr("%1() requires at least one argument.\n").arg(name));
+                    return;
+                }
+                if (AST::cast<AST::TemplateLiteral *>(node->arguments->expression)) {
+                    yyMsg(identLineNo) << qPrintable(LU::tr("%1() cannot be used with template literals. Ignoring\n").arg(name));
                     return;
                 }
 
@@ -229,7 +236,7 @@ private:
 
 
     void processComments(quint32 offset, bool flush = false);
-    void processComment(const AST::SourceLocation &loc);
+    void processComment(const SourceLocation &loc);
     void consumeComment();
 
     bool createString(AST::ExpressionNode *ast, QString *out)
@@ -259,7 +266,7 @@ private:
     TranslatorMessage::ExtraData extra;
     QString sourcetext;
     QString trcontext;
-    QList<AST::SourceLocation> m_todo;
+    QList<SourceLocation> m_todo;
 };
 
 QString createErrorString(const QString &filename, const QString &code, Parser &parser)
@@ -274,28 +281,23 @@ QString createErrorString(const QString &filename, const QString &code, Parser &
         if (m.isWarning())
             continue;
 
-        QString error = filename + QLatin1Char(':') + QString::number(m.loc.startLine)
-                        + QLatin1Char(':') + QString::number(m.loc.startColumn) + QLatin1String(": error: ")
-                        + m.message + QLatin1Char('\n');
+#if Q_QML_PRIVATE_API_VERSION >= 8
+        const int line = m.loc.startLine;
+        const int column = m.loc.startColumn;
+#else
+        const int line = m.line;
+        const int column = m.column;
+#endif
+        QString error = filename + QLatin1Char(':')
+                        + QString::number(line) + QLatin1Char(':') + QString::number(column)
+                        + QLatin1String(": error: ") + m.message + QLatin1Char('\n');
 
-        int line = 0;
-        if (m.loc.startLine > 0)
-            line = m.loc.startLine - 1;
-
-        const QString textLine = lines.at(line);
-
+        const QString textLine = lines.at(line > 0 ? line - 1 : 0);
         error += textLine + QLatin1Char('\n');
-
-        int column = m.loc.startColumn - 1;
-        if (column < 0)
-            column = 0;
-
-        column = qMin(column, textLine.length());
-
-        for (int i = 0; i < column; ++i) {
+        for (int i = 0, end = qMin(column > 0 ? column - 1 : 0, textLine.length()); i < end; ++i) {
             const QChar ch = textLine.at(i);
             if (ch.isSpace())
-                error += ch.unicode();
+                error += ch;
             else
                 error += QLatin1Char(' ');
         }
@@ -320,7 +322,7 @@ void FindTrCalls::postVisit(AST::Node *node)
 void FindTrCalls::processComments(quint32 offset, bool flush)
 {
     for (; !m_todo.isEmpty(); m_todo.removeFirst()) {
-        AST::SourceLocation loc = m_todo.first();
+        SourceLocation loc = m_todo.first();
         if (! flush && (loc.begin() >= offset))
             break;
 
@@ -337,7 +339,7 @@ void FindTrCalls::consumeComment()
     sourcetext.clear();
 }
 
-void FindTrCalls::processComment(const AST::SourceLocation &loc)
+void FindTrCalls::processComment(const SourceLocation &loc)
 {
     if (!loc.length)
         return;

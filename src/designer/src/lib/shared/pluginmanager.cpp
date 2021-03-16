@@ -88,8 +88,8 @@ QT_BEGIN_NAMESPACE
 
 static QStringList unique(const QStringList &lst)
 {
-    const QSet<QString> s = QSet<QString>::fromList(lst);
-    return s.toList();
+    const QSet<QString> s(lst.cbegin(), lst.cend());
+    return s.values();
 }
 
 QStringList QDesignerPluginManager::defaultPluginPaths()
@@ -134,9 +134,9 @@ static inline QString getDesignerLanguage(QDesignerFormEditorInterface *core)
 class QDesignerCustomWidgetSharedData : public QSharedData {
 public:
     // Type of a string property
-    typedef QPair<qdesigner_internal::TextPropertyValidationMode, bool> StringPropertyType;
-    typedef QHash<QString, StringPropertyType> StringPropertyTypeMap;
-    typedef QHash<QString, QString> PropertyToolTipMap;
+    using StringPropertyType = QPair<qdesigner_internal::TextPropertyValidationMode, bool>;
+    using StringPropertyTypeMap = QHash<QString, StringPropertyType>;
+    using PropertyToolTipMap = QHash<QString, QString>;
 
     explicit QDesignerCustomWidgetSharedData(const QString &thePluginPath) : pluginPath(thePluginPath) {}
     void clearXML();
@@ -453,7 +453,7 @@ QDesignerCustomWidgetData::ParseResult
 
 class QDesignerPluginManagerPrivate {
     public:
-    typedef QPair<QString, QString> ClassNamePropertyNameKey;
+    using ClassNamePropertyNameKey = QPair<QString, QString>;
 
     QDesignerPluginManagerPrivate(QDesignerFormEditorInterface *core);
 
@@ -544,7 +544,7 @@ void QDesignerPluginManagerPrivate::addCustomWidgets(const QObject *o,
         return;
     }
     if (const QDesignerCustomWidgetCollectionInterface *coll = qobject_cast<QDesignerCustomWidgetCollectionInterface*>(o)) {
-        const QList<QDesignerCustomWidgetInterface *> &collCustomWidgets = coll->customWidgets();
+        const auto &collCustomWidgets = coll->customWidgets();
         for (QDesignerCustomWidgetInterface *c : collCustomWidgets)
             addCustomWidget(c, pluginPath, designerLanguage);
     }
@@ -589,7 +589,7 @@ QStringList QDesignerPluginManager::findPlugins(const QString &path)
         return QStringList();
 
     const QFileInfoList infoList = dir.entryInfoList(QDir::Files);
-    if (infoList.empty())
+    if (infoList.isEmpty())
         return QStringList();
 
     // Load symbolic links but make sure all file names are unique as not
@@ -651,7 +651,7 @@ QStringList QDesignerPluginManager::pluginPaths() const
 QObject *QDesignerPluginManager::instance(const QString &plugin) const
 {
     if (m_d->m_disabledPlugins.contains(plugin))
-        return 0;
+        return nullptr;
 
     QPluginLoader loader(plugin);
     return loader.instance();
@@ -738,7 +738,7 @@ void QDesignerPluginManager::ensureInitialized()
     m_d->clearCustomWidgets();
     // Add the static custom widgets
     const QObjectList staticPluginObjects = QPluginLoader::staticInstances();
-    if (!staticPluginObjects.empty()) {
+    if (!staticPluginObjects.isEmpty()) {
         const QString staticPluginPath = QCoreApplication::applicationFilePath();
         for (QObject *o : staticPluginObjects)
             m_d->addCustomWidgets(o, staticPluginPath, designerLanguage);

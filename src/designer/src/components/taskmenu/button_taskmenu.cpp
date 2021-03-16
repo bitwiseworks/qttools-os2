@@ -56,8 +56,8 @@ namespace qdesigner_internal {
 
 enum { debugButtonMenu = 0 };
 
-typedef QList<QAbstractButton *> ButtonList;
-typedef QList<QButtonGroup *> ButtonGroupList;
+using ButtonList = QList<QAbstractButton *>;
+using ButtonGroupList = QList<QButtonGroup *>;
 
 // ButtonGroupCommand: Base for commands handling button groups and button lists
 // addButtonsToGroup() and removeButtonsFromGroup() are low-level helpers for
@@ -95,7 +95,7 @@ private:
 
 ButtonGroupCommand::ButtonGroupCommand(const QString &description, QDesignerFormWindowInterface *formWindow) :
     QDesignerFormWindowCommand(description, formWindow),
-    m_buttonGroup(0)
+    m_buttonGroup(nullptr)
 {
 }
 
@@ -211,7 +211,7 @@ CreateButtonGroupCommand::CreateButtonGroupCommand(QDesignerFormWindowInterface 
 
 bool CreateButtonGroupCommand::init(const ButtonList &bl)
 {
-    if (bl.empty())
+    if (bl.isEmpty())
         return false;
     QDesignerFormWindowInterface *fw = formWindow();
     QButtonGroup *buttonGroup = new QButtonGroup(fw->mainContainer());
@@ -286,9 +286,9 @@ RemoveButtonsFromGroupCommand::RemoveButtonsFromGroupCommand(QDesignerFormWindow
 
 bool RemoveButtonsFromGroupCommand::init(const ButtonList &bl)
 {
-    if (bl.empty())
+    if (bl.isEmpty())
         return false;
-    QButtonGroup *group = bl.front()->group();
+    QButtonGroup *group = bl.constFirst()->group();
     if (!group)
         return false;
     if (bl.size() >= group->buttons().size())
@@ -303,10 +303,7 @@ bool RemoveButtonsFromGroupCommand::init(const ButtonList &bl)
 ButtonGroupMenu::ButtonGroupMenu(QObject *parent) :
     QObject(parent),
     m_selectGroupAction(new QAction(tr("Select members"), this)),
-    m_breakGroupAction(new QAction(tr("Break"), this)),
-    m_formWindow(0),
-    m_buttonGroup(0),
-    m_currentButton(0)
+    m_breakGroupAction(new QAction(tr("Break"), this))
 {
     connect(m_breakGroupAction, &QAction::triggered, this, &ButtonGroupMenu::breakGroup);
     connect(m_selectGroupAction, &QAction::triggered, this, &ButtonGroupMenu::selectGroup);
@@ -319,7 +316,7 @@ void ButtonGroupMenu::initialize(QDesignerFormWindowInterface *formWindow, QButt
     m_formWindow = formWindow;
     Q_ASSERT(m_formWindow);
 
-    const bool canBreak = buttonGroup != 0;
+    const bool canBreak = buttonGroup != nullptr;
     m_breakGroupAction->setEnabled(canBreak);
     m_selectGroupAction->setEnabled(canBreak);
 }
@@ -423,7 +420,7 @@ QRect LinkDescriptionTaskMenuInlineEditor::editRectangle() const
 ButtonTaskMenu::ButtonTaskMenu(QAbstractButton *button, QObject *parent)  :
     QDesignerTaskMenu(button, parent),
     m_assignGroupSubMenu(new QMenu),
-    m_assignActionGroup(0),
+    m_assignActionGroup(nullptr),
     m_assignToGroupSubMenuAction(new QAction(tr("Assign to button group"), this)),
     m_currentGroupSubMenu(new QMenu),
     m_currentGroupSubMenuAction(new QAction(tr("Button group"), this)),
@@ -465,7 +462,7 @@ bool ButtonTaskMenu::refreshAssignMenu(const QDesignerFormWindowInterface *fw, i
     // clear
     if (m_assignActionGroup) {
         delete m_assignActionGroup;
-        m_assignActionGroup = 0;
+        m_assignActionGroup = nullptr;
     }
     m_assignGroupSubMenu->clear();
     if (st == OtherSelection)
@@ -515,7 +512,7 @@ bool ButtonTaskMenu::refreshAssignMenu(const QDesignerFormWindowInterface *fw, i
 QList<QAction*> ButtonTaskMenu::taskActions() const
 {
     ButtonTaskMenu *ncThis = const_cast<ButtonTaskMenu*>(this);
-    QButtonGroup *buttonGroup = 0;
+    QButtonGroup *buttonGroup = nullptr;
 
     QDesignerFormWindowInterface *fw = formWindow();
     const SelectionType st = selectionType(fw->cursor(), &buttonGroup);
@@ -563,14 +560,14 @@ static ButtonList buttonList(const QDesignerFormWindowCursorInterface *cursor)
 static QUndoCommand *createRemoveButtonsCommand(QDesignerFormWindowInterface *fw, const ButtonList &bl)
 {
 
-    QButtonGroup *bg = bl.front()->group();
+    QButtonGroup *bg = bl.constFirst()->group();
     // Complete group or 1-member group?
     if (bl.size() >= bg->buttons().size() - 1) {
         BreakButtonGroupCommand *breakCmd = new BreakButtonGroupCommand(fw);
         if (!breakCmd->init(bg)) {
             qWarning("** WARNING Failed to initialize BreakButtonGroupCommand!");
             delete breakCmd;
-            return 0;
+            return nullptr;
         }
         return breakCmd;
     }
@@ -580,7 +577,7 @@ static QUndoCommand *createRemoveButtonsCommand(QDesignerFormWindowInterface *fw
     if (!removeCmd->init(bl)) {
         qWarning("** WARNING Failed to initialize RemoveButtonsFromGroupCommand!");
         delete removeCmd;
-        return 0;
+        return nullptr;
     }
     return removeCmd;
 }
@@ -590,8 +587,8 @@ void ButtonTaskMenu::createGroup()
     QDesignerFormWindowInterface *fw = formWindow();
     const ButtonList bl = buttonList(fw->cursor());
     // Do we need to remove the buttons from an existing group?
-    QUndoCommand *removeCmd = 0;
-    if (bl.front()->group()) {
+    QUndoCommand *removeCmd = nullptr;
+    if (bl.constFirst()->group()) {
         removeCmd = createRemoveButtonsCommand(fw, bl);
         if (!removeCmd)
             return;
@@ -624,7 +621,7 @@ ButtonTaskMenu::SelectionType ButtonTaskMenu::selectionType(const QDesignerFormW
     if (!selectionCount)
         return OtherSelection;
 
-    QButtonGroup *commonGroup = 0;
+    QButtonGroup *commonGroup = nullptr;
     for (int i = 0; i < selectionCount; i++) {
         if (const QAbstractButton *ab = qobject_cast<const QAbstractButton *>(cursor->selectedWidget(i))) {
             QButtonGroup *buttonGroup = ab->group();
@@ -653,8 +650,8 @@ void ButtonTaskMenu::addToGroup(QAction *a)
     QDesignerFormWindowInterface *fw = formWindow();
     const ButtonList bl = buttonList(fw->cursor());
     // Do we need to remove the buttons from an existing group?
-    QUndoCommand *removeCmd = 0;
-    if (bl.front()->group()) {
+    QUndoCommand *removeCmd = nullptr;
+    if (bl.constFirst()->group()) {
         removeCmd = createRemoveButtonsCommand(fw, bl);
         if (!removeCmd)
             return;

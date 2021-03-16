@@ -35,9 +35,11 @@
 #include <QSortFilterProxyModel>
 #include <QUrl>
 
+#include <QtHelp/QHelpLink>
+
 QT_BEGIN_NAMESPACE
 
-TopicChooser::TopicChooser(QWidget *parent, const QString &keyword, const QMap<QString, QUrl> &links)
+TopicChooser::TopicChooser(QWidget *parent, const QString &keyword, const QList<QHelpLink> &docs)
     : QDialog(parent)
     , m_filterModel(new QSortFilterProxyModel(this))
 {
@@ -53,10 +55,10 @@ TopicChooser::TopicChooser(QWidget *parent, const QString &keyword, const QMap<Q
     m_filterModel->setSourceModel(model);
     m_filterModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
 
-    for (auto it = links.cbegin(), end = links.cend(); it != end; ++it) {
-        m_links.append(it.value());
-        QStandardItem *item = new QStandardItem(it.key());
-        item->setToolTip(it.value().toString());
+    for (const auto &doc : docs) {
+        m_links.append(doc.url);
+        QStandardItem *item = new QStandardItem(doc.title);
+        item->setToolTip(doc.url.toString());
         model->appendRow(item);
     }
 
@@ -120,23 +122,14 @@ bool TopicChooser::eventFilter(QObject *object, QEvent *event)
 {
     TRACE_OBJ
     if (object == ui.lineEdit && event->type() == QEvent::KeyPress) {
-        QModelIndex idx = ui.listWidget->currentIndex();
-        switch ((static_cast<QKeyEvent*>(event)->key())) {
-            case Qt::Key_Up:
-                idx = m_filterModel->index(idx.row() - 1, idx.column(),
-                    idx.parent());
-                if (idx.isValid())
-                    ui.listWidget->setCurrentIndex(idx);
-                break;
-
-            case Qt::Key_Down:
-                idx = m_filterModel->index(idx.row() + 1, idx.column(),
-                    idx.parent());
-                if (idx.isValid())
-                    ui.listWidget->setCurrentIndex(idx);
-                break;
-
-            default: ;
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        switch (keyEvent->key()) {
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_PageUp:
+        case Qt::Key_PageDown:
+            QCoreApplication::sendEvent(ui.listWidget, event);
+            break;
         }
     } else if (ui.lineEdit && event->type() == QEvent::FocusIn
         && static_cast<QFocusEvent *>(event)->reason() != Qt::MouseFocusReason) {

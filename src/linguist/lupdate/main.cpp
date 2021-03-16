@@ -197,10 +197,6 @@ static void printErr(const QString & out)
     std::cerr << qPrintable(out);
 }
 
-class LU {
-    Q_DECLARE_TR_FUNCTIONS(LUpdate)
-};
-
 static void recursiveFileInfoList(const QDir &dir,
     const QSet<QString> &nameFilters, QDir::Filters filter,
     QFileInfoList *fileinfolist)
@@ -289,7 +285,7 @@ static void printUsage()
 
 static bool handleTrFunctionAliases(const QString &arg)
 {
-    foreach (const QString &pair, arg.split(QLatin1Char(','), QString::SkipEmptyParts)) {
+    foreach (const QString &pair, arg.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
         const int equalSign = pair.indexOf(QLatin1Char('='));
         if (equalSign < 0) {
             printErr(LU::tr("tr-function mapping '%1' in -tr-function-alias is missing the '='.\n").arg(pair));
@@ -529,14 +525,14 @@ static QSet<QString> projectRoots(const QString &projectFile, const QStringList 
     sourceDirs.insert(proPath + QLatin1Char('/'));
     for (const QString &sf : sourceFiles)
         sourceDirs.insert(sf.left(sf.lastIndexOf(QLatin1Char('/')) + 1));
-    QStringList rootList = sourceDirs.toList();
+    QStringList rootList = sourceDirs.values();
     rootList.sort();
     for (int prev = 0, curr = 1; curr < rootList.length(); )
         if (rootList.at(curr).startsWith(rootList.at(prev)))
             rootList.removeAt(curr);
         else
             prev = curr++;
-    return rootList.toSet();
+    return QSet<QString>(rootList.cbegin(), rootList.cend());
 }
 
 class ProjectProcessor
@@ -853,7 +849,7 @@ int main(int argc, char **argv)
             while (!lstFile.atEnd()) {
                 QString lineContent = QString::fromLocal8Bit(lstFile.readLine().trimmed());
 
-                if (lineContent.startsWith(QLatin1Literal("-I"))) {
+                if (lineContent.startsWith(QLatin1String("-I"))) {
                     if (lineContent.length() == 2) {
                         printErr(LU::tr("The -I option should be followed by a path.\n"));
                         return 1;

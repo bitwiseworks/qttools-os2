@@ -94,7 +94,7 @@ public:
     void connectTabBar();
 
 public slots:
-#ifndef QT_NO_CLIPBOARD
+#if QT_CONFIG(clipboard)
     void copy();
 #endif
     void home();
@@ -127,9 +127,11 @@ public slots:
 
 signals:
     void currentViewerChanged();
+#if QT_CONFIG(clipboard)
     void copyAvailable(bool yes);
+#endif
     void sourceChanged(const QUrl &url);
-    void highlighted(const QString &link);
+    void highlighted(const QUrl &link);
     void forwardAvailable(bool available);
     void backwardAvailable(bool available);
     void addBookmark(const QString &title, const QString &url);
@@ -142,7 +144,7 @@ private slots:
     void highlightSearchTerms();
     void printPreviewToPrinter(QPrinter *printer);
     void handleSourceChanged(const QUrl &url);
-    void slotHighlighted(const QString &link);
+    void slotHighlighted(const QUrl& link);
 
 private:
     void initPrinter();
@@ -160,7 +162,7 @@ private:
     FindWidget *m_findWidget;
     QStackedWidget *m_stackedWidget;
     TabBar *m_tabBar;
-    QHash<QString, QString> m_resolvedLinks;
+    QHash<QUrl, QUrl> m_resolvedLinks;
 };
 
 QT_END_NAMESPACE

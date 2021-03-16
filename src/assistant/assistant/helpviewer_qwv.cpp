@@ -101,7 +101,7 @@ void HelpPage::triggerAction(WebAction action, bool checked)
             break;
     }
 
-#ifndef QT_NO_CLIPBOARD
+#if QT_CONFIG(clipboard)
     if (action == CopyLinkToClipboard || action == CopyImageUrlToClipboard) {
         const QString link = QApplication::clipboard()->text();
         QApplication::clipboard()->setText(HelpEngineWrapper::instance().findFile(link).toString());
@@ -124,11 +124,12 @@ bool HelpPage::acceptNavigationRequest(QWebFrame *,
     }
 
     if (type == QWebPage::NavigationTypeLinkClicked
-        && (m_keyboardModifiers & Qt::ControlModifier || m_pressedButtons == Qt::MidButton)) {
-            m_pressedButtons = Qt::NoButton;
-            m_keyboardModifiers = Qt::NoModifier;
-            OpenPagesManager::instance()->createPage(url);
-            return false;
+        && (m_keyboardModifiers & Qt::ControlModifier
+            || m_pressedButtons == Qt::MiddleButton)) {
+        m_pressedButtons = Qt::NoButton;
+        m_keyboardModifiers = Qt::NoModifier;
+        OpenPagesManager::instance()->createPage(url);
+        return false;
     }
 
     m_loadingUrl = url; // because of async page loading, we will hit some kind
@@ -166,8 +167,10 @@ HelpViewer::HelpViewer(qreal zoom, QWidget *parent)
         SLOT(actionChanged()));
     connect(pageAction(QWebPage::Forward), SIGNAL(changed()), this,
         SLOT(actionChanged()));
-    connect(page(), SIGNAL(linkHovered(QString,QString,QString)), this,
-        SIGNAL(highlighted(QString)));
+    connect(page(), &QWebPage::linkHovered, this,
+            [this] (const QString &link, const QString &, const QString &) {
+                emit this->highlighted(QUrl(link));
+    });
     connect(this, SIGNAL(urlChanged(QUrl)), this, SIGNAL(sourceChanged(QUrl)));
     connect(this, SIGNAL(loadStarted()), this, SLOT(setLoadStarted()));
     connect(this, SIGNAL(loadFinished(bool)), this, SLOT(setLoadFinished(bool)));
@@ -288,7 +291,7 @@ bool HelpViewer::findText(const QString &text, FindFlags flags, bool incremental
 
 // -- public slots
 
-#ifndef QT_NO_CLIPBOARD
+#if QT_CONFIG(clipboard)
 void HelpViewer::copy()
 {
     TRACE_OBJ
@@ -314,7 +317,7 @@ void HelpViewer::keyPressEvent(QKeyEvent *e)
 {
     TRACE_OBJ
     // TODO: remove this once we support multiple keysequences per command
-#ifndef QT_NO_CLIPBOARD
+#if QT_CONFIG(clipboard)
     if (e->key() == Qt::Key_Insert && e->modifiers() == Qt::CTRL) {
         if (!selectedText().isEmpty())
             copy();

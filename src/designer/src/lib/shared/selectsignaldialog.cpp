@@ -53,7 +53,7 @@ namespace qdesigner_internal {
 
 enum { MethodRole = Qt::UserRole + 1 };
 
-typedef QVector<SelectSignalDialog::Method> Methods;
+using Methods = QVector<SelectSignalDialog::Method>;
 
 SelectSignalDialog::SelectSignalDialog(QWidget *parent)
     : QDialog(parent)
@@ -117,7 +117,7 @@ static void appendClass(const QString &className, Methods methods, QStandardItem
     for (const SelectSignalDialog::Method &m : qAsConst(methods)) {
         QStandardItem *item = new QStandardItem(m.signature);
         item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-        item->setData(qVariantFromValue(m), MethodRole);
+        item->setData(QVariant::fromValue(m), MethodRole);
         topLevelItem->appendRow(item);
     }
 }
@@ -129,7 +129,7 @@ static QString declaredInClass(const QDesignerMetaObjectInterface *metaObject, c
 
     for (;;) {
         const QDesignerMetaObjectInterface *tmpMeta = meta->superClass();
-        if (tmpMeta == 0)
+        if (tmpMeta == nullptr)
             break;
         if (tmpMeta->indexOfMethod(member) == -1)
             break;
@@ -162,7 +162,7 @@ void SelectSignalDialog::populate(QDesignerFormEditorInterface *core, QObject *o
     if (defaultSignal.isEmpty()) {
         selectedIndex = m_model->index(0, 0, m_model->index(0, 0, QModelIndex())); // first method
     } else {
-        const QList<QStandardItem *> items = m_model->findItems(defaultSignal, Qt::MatchExactly | Qt::MatchRecursive, 0);
+        const auto items = m_model->findItems(defaultSignal, Qt::MatchExactly | Qt::MatchRecursive, 0);
         if (!items.isEmpty())
             selectedIndex = m_model->indexFromItem(items.constFirst());
     }

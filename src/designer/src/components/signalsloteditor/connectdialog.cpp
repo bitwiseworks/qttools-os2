@@ -42,10 +42,6 @@
 
 QT_BEGIN_NAMESPACE
 
-namespace {
-    typedef QList<QListWidgetItem*> ListWidgetItems;
-}
-
 static QString realClassName(QDesignerFormEditorInterface *core, QWidget *widget)
 {
     QString class_name = QLatin1String(widget->metaObject()->className());
@@ -138,22 +134,22 @@ void ConnectDialog::populateLists()
 
 void ConnectDialog::setSignalSlot(const QString &signal, const QString &slot)
 {
-    ListWidgetItems sigItems = m_ui.signalList->findItems(signal, Qt::MatchExactly);
+    auto sigItems = m_ui.signalList->findItems(signal, Qt::MatchExactly);
 
-    if (sigItems.empty()) {
+    if (sigItems.isEmpty()) {
         m_ui.showAllCheckBox->setChecked(true);
         sigItems = m_ui.signalList->findItems(signal, Qt::MatchExactly);
     }
 
-    if (!sigItems.empty()) {
-        selectSignal(sigItems.front());
-        ListWidgetItems slotItems = m_ui.slotList->findItems(slot, Qt::MatchExactly);
-        if (slotItems.empty()) {
+    if (!sigItems.isEmpty()) {
+        selectSignal(sigItems.constFirst());
+        auto slotItems = m_ui.slotList->findItems(slot, Qt::MatchExactly);
+        if (slotItems.isEmpty()) {
             m_ui.showAllCheckBox->setChecked(true);
             slotItems = m_ui.slotList->findItems(slot, Qt::MatchExactly);
         }
-        if (!slotItems.empty())
-            selectSlot(slotItems.front());
+        if (!slotItems.isEmpty())
+            selectSlot(slotItems.constFirst());
     }
 }
 
@@ -194,7 +190,7 @@ void ConnectDialog::selectSlot(QListWidgetItem *item)
 
 QString ConnectDialog::signal() const
 {
-    const ListWidgetItems item_list = m_ui.signalList->selectedItems();
+    const auto item_list = m_ui.signalList->selectedItems();
     if (item_list.size() != 1)
         return QString();
     return item_list.at(0)->text();
@@ -202,7 +198,7 @@ QString ConnectDialog::signal() const
 
 QString ConnectDialog::slot() const
 {
-    const ListWidgetItems item_list = m_ui.slotList->selectedItems();
+    const auto item_list = m_ui.slotList->selectedItems();
     if (item_list.size() != 1)
         return QString();
     return item_list.at(0)->text();
@@ -223,7 +219,7 @@ void ConnectDialog::populateSlotList(const QString &signal)
     font.setItalic(true);
     QVariant variantFont = QVariant::fromValue(font);
 
-    QListWidgetItem *curr = 0;
+    QListWidgetItem *curr = nullptr;
     QMap<QString, QString>::ConstIterator itMember = memberToClassName.constBegin();
     const QMap<QString, QString>::ConstIterator itMemberEnd = memberToClassName.constEnd();
     while (itMember != itMemberEnd) {
@@ -265,7 +261,7 @@ void ConnectDialog::populateSignalList()
     font.setItalic(true);
     QVariant variantFont = QVariant::fromValue(font);
 
-    QListWidgetItem *curr = 0;
+    QListWidgetItem *curr = nullptr;
     QMap<QString, QString>::ConstIterator itMember = memberToClassName.constBegin();
     const QMap<QString, QString>::ConstIterator itMemberEnd = memberToClassName.constEnd();
     while (itMember != itMemberEnd) {

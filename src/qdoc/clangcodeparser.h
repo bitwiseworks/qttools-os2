@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2018 The Qt Company Ltd.
+** Copyright (C) 2019 The Qt Company Ltd.
 ** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
@@ -40,9 +40,9 @@
 #ifndef CLANGCODEPARSER_H
 #define CLANGCODEPARSER_H
 
-#include <QTemporaryDir>
-
 #include "cppcodeparser.h"
+
+#include <QtCore/qtemporarydir.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -51,19 +51,20 @@ class ClangCodeParser : public CppCodeParser
     Q_DECLARE_TR_FUNCTIONS(QDoc::ClangCodeParser)
 
 public:
-    ~ClangCodeParser();
+    ~ClangCodeParser() override;
 
-    void initializeParser(const Config& config) override;
+    void initializeParser() override;
     void terminateParser() override;
     QString language() override;
     QStringList headerFileNameFilter() override;
     QStringList sourceFileNameFilter() override;
-    void parseHeaderFile(const Location& location, const QString& filePath) override;
-    void parseSourceFile(const Location& location, const QString& filePath) override;
+    void parseHeaderFile(const Location &location, const QString &filePath) override;
+    void parseSourceFile(const Location &location, const QString &filePath) override;
     void precompileHeaders() override;
     Node *parseFnArg(const Location &location, const QString &fnArg) override;
+    static const QByteArray &fn() { return fn_; }
 
- private:
+private:
     void getDefaultArgs();
     bool getMoreArgs();
     void buildPCH();
@@ -78,6 +79,8 @@ private:
     QVector<QByteArray> defines_;
     std::vector<const char *> args_;
     QVector<QByteArray> moreArgs_;
+    QStringList namespaceScope_;
+    static QByteArray fn_;
 };
 
 QT_END_NAMESPACE

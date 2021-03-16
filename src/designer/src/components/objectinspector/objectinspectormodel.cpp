@@ -134,21 +134,13 @@ namespace qdesigner_internal {
     // comparing the lists of ObjectData. If it is the same, only the item data (class name [changed by promotion],
     // object name and icon) are checked and the existing items are updated.
 
-    ObjectData::ObjectData() :
-        m_parent(0),
-        m_object(0),
-        m_type(Object),
-        m_managedLayoutType(LayoutInfo::NoLayout)
-    {
-    }
+    ObjectData::ObjectData() = default;
 
     ObjectData::ObjectData(QObject *parent, QObject *object, const ModelRecursionContext &ctx) :
        m_parent(parent),
        m_object(object),
-       m_type(Object),
        m_className(QLatin1String(object->metaObject()->className())),
-       m_objectName(object->objectName()),
-       m_managedLayoutType(LayoutInfo::NoLayout)
+       m_objectName(object->objectName())
     {
 
         // 1) set entry
@@ -268,8 +260,6 @@ namespace qdesigner_internal {
         setItemsDisplayData(row, icons, ClassNameChanged|ObjectNameChanged|ClassIconChanged|TypeChanged|LayoutTypeChanged);
     }
 
-    typedef QList<ObjectData> ObjectModel;
-
     // Recursive routine that creates the model by traversing the form window object tree.
     void createModelRecursion(const QDesignerFormWindowInterface *fwi,
                               QObject *parent,
@@ -277,66 +267,59 @@ namespace qdesigner_internal {
                               ObjectModel &model,
                               const ModelRecursionContext &ctx)
     {
-        typedef QList<QButtonGroup *> ButtonGroupList;
-        typedef QList<QAction *> ActionList;
-
+        using ButtonGroupList = QVector<QButtonGroup *>;
         // 1) Create entry
         const ObjectData entry(parent, object, ctx);
         model.push_back(entry);
 
         // 2) recurse over widget children via container extension or children list
-        const QDesignerContainerExtension *containerExtension = 0;
+        const QDesignerContainerExtension *containerExtension = nullptr;
         if (entry.type() == ObjectData::ExtensionContainer) {
             containerExtension = qt_extension<QDesignerContainerExtension*>(fwi->core()->extensionManager(), object);
             Q_ASSERT(containerExtension);
             const int count = containerExtension->count();
             for (int i=0; i < count; ++i) {
                 QObject *page = containerExtension->widget(i);
-                Q_ASSERT(page != 0);
+                Q_ASSERT(page != nullptr);
                 createModelRecursion(fwi, object, page, model, ctx);
             }
         }
 
-        QObjectList children = object->children();
-        if (!children.empty()) {
+        if (!object->children().isEmpty()) {
             ButtonGroupList buttonGroups;
+            QObjectList children = object->children();
             std::sort(children.begin(), children.end(), sortEntry);
-            const QObjectList::const_iterator cend = children.constEnd();
-            for (QObjectList::const_iterator it = children.constBegin(); it != cend; ++it) {
+            for (QObject *childObject : qAsConst(children)) {
                 // Managed child widgets unless we had a container extension
-                if ((*it)->isWidgetType()) {
+                if (childObject->isWidgetType()) {
                     if (!containerExtension) {
-                        QWidget *widget = qobject_cast<QWidget*>(*it);
+                        QWidget *widget = qobject_cast<QWidget*>(childObject);
                         if (fwi->isManaged(widget))
                             createModelRecursion(fwi, object, widget, model, ctx);
                     }
                 } else {
-                    if (ctx.mdb->item(*it)) {
-                        if (QButtonGroup *bg = qobject_cast<QButtonGroup*>(*it))
+                    if (ctx.mdb->item(childObject)) {
+                        if (auto bg = qobject_cast<QButtonGroup*>(childObject))
                             buttonGroups.push_back(bg);
                     } // Has MetaDataBase entry
                 }
             }
             // Add button groups
-            if (!buttonGroups.empty()) {
-                const ButtonGroupList::const_iterator bgcend = buttonGroups.constEnd();
-                for (ButtonGroupList::const_iterator bgit = buttonGroups.constBegin(); bgit != bgcend; ++bgit)
-                    createModelRecursion(fwi, object, *bgit, model, ctx);
+            if (!buttonGroups.isEmpty()) {
+                for (QButtonGroup *group : qAsConst(buttonGroups))
+                    createModelRecursion(fwi, object, group, model, ctx);
             }
         } // has children
         if (object->isWidgetType()) {
             // Add actions
-            const ActionList actions = static_cast<QWidget*>(object)->actions();
-            if (!actions.empty()) {
-                const ActionList::const_iterator cend = actions.constEnd();
-                    for (ActionList::const_iterator it = actions.constBegin(); it != cend; ++it)
-                    if (ctx.mdb->item(*it)) {
-                        QAction *action = *it;
-                        QObject *obj = action;
-                            if (action->menu())
-                            obj = action->menu();
-                        createModelRecursion(fwi, object, obj, model, ctx);
-                    }
+            const auto actions = static_cast<QWidget*>(object)->actions();
+            for (QAction *action : actions) {
+                if (ctx.mdb->item(action)) {
+                    QObject *childObject = action;
+                    if (auto menu = action->menu())
+                        childObject = menu;
+                    createModelRecursion(fwi, object, childObject, model, ctx);
+                }
             }
         }
     }
@@ -372,10 +355,10 @@ namespace qdesigner_internal {
 
     ObjectInspectorModel::UpdateResult ObjectInspectorModel::update(QDesignerFormWindowInterface *fw)
     {
-        QWidget *mainContainer = fw ? fw->mainContainer() : static_cast<QWidget*>(0);
+        QWidget *mainContainer = fw ? fw->mainContainer() : nullptr;
         if (!mainContainer) {
             clearItems();
-            m_formWindow = 0;
+            m_formWindow = nullptr;
             return NoForm;
         }
         m_formWindow = fw;
@@ -385,7 +368,7 @@ namespace qdesigner_internal {
 
         static const QString separator = QCoreApplication::translate("ObjectInspectorModel", "separator");
         const ModelRecursionContext ctx(fw->core(),  separator);
-        createModelRecursion(fw, 0, mainContainer, newModel, ctx);
+        createModelRecursion(fw, nullptr, mainContainer, newModel, ctx);
 
         if (newModel == m_model) {
             updateItemContents(m_model, newModel);
@@ -402,7 +385,7 @@ namespace qdesigner_internal {
         if (index.isValid())
             if (const QStandardItem *item = itemFromIndex(index))
                 return objectOfItem(item);
-        return 0;
+        return nullptr;
     }
 
     // Missing Qt API: get a row
@@ -423,7 +406,7 @@ namespace qdesigner_internal {
     void ObjectInspectorModel::rebuild(const ObjectModel &newModel)
     {
         clearItems();
-        if (newModel.empty())
+        if (newModel.isEmpty())
             return;
 
         const ObjectModel::const_iterator mcend = newModel.constEnd();
@@ -432,7 +415,7 @@ namespace qdesigner_internal {
         StandardItemList rootRow = createModelRow(it->object());
         it->setItems(rootRow, m_icons);
         appendRow(rootRow);
-        m_objectIndexMultiMap.insert(it->object(), indexFromItem(rootRow.front()));
+        m_objectIndexMultiMap.insert(it->object(), indexFromItem(rootRow.constFirst()));
         for (++it; it != mcend; ++it) {
             // Add to parent item, found via map
             const QModelIndex parentIndex = m_objectIndexMultiMap.value(it->parent(), QModelIndex());
@@ -441,7 +424,7 @@ namespace qdesigner_internal {
             StandardItemList row = createModelRow(it->object());
             it->setItems(row, m_icons);
             parentItem->appendRow(row);
-            m_objectIndexMultiMap.insert(it->object(), indexFromItem(row.front()));
+            m_objectIndexMultiMap.insert(it->object(), indexFromItem(row.constFirst()));
         }
     }
 
@@ -450,7 +433,7 @@ namespace qdesigner_internal {
     {
         // Change text and icon. Keep a set of changed object
         // as for example actions might occur several times in the tree.
-        typedef QSet<QObject *> QObjectSet;
+        using QObjectSet = QSet<QObject *>;
 
         QObjectSet changedObjects;
 

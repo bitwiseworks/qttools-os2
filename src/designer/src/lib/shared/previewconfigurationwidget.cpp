@@ -57,19 +57,19 @@ static const char *skinExtensionC = "skin";
 
 // Pair of skin name, path
 typedef QPair<QString, QString> SkinNamePath;
-typedef QList<SkinNamePath> Skins;
+using Skins = QVector<SkinNamePath>;
 enum { SkinComboNoneIndex = 0 };
 
 // find default skins (resources)
 static const Skins &defaultSkins() {
     static Skins rc;
-    if (rc.empty()) {
+    if (rc.isEmpty()) {
         const QString skinPath = QLatin1String(skinResourcePathC);
         QString pattern = QStringLiteral("*.");
         pattern += QLatin1String(skinExtensionC);
         const QDir dir(skinPath, pattern);
         const QFileInfoList list = dir.entryInfoList(QDir::Dirs|QDir::NoDotAndDotDot, QDir::Name);
-        if (list.empty())
+        if (list.isEmpty())
             return rc;
         const QFileInfoList::const_iterator lcend = list.constEnd();
         for (QFileInfoList::const_iterator it = list.constBegin(); it != lcend; ++it)
@@ -144,9 +144,8 @@ PreviewConfigurationWidget::PreviewConfigurationWidgetPrivate::PreviewConfigurat
     Skins skins = defaultSkins();
     skins.push_front(SkinNamePath(PreviewConfigurationWidget::tr("None"), QString()));
 
-    const Skins::const_iterator scend = skins.constEnd();
-    for (Skins::const_iterator it = skins.constBegin(); it != scend; ++it)
-        m_ui.m_skinCombo->addItem (it->first, QVariant(it->second));
+    for (const auto &skin : qAsConst(skins))
+        m_ui.m_skinCombo->addItem(skin.first, QVariant(skin.second));
     m_browseSkinIndex = m_firstUserSkinIndex = skins.size();
     m_ui.m_skinCombo->addItem(PreviewConfigurationWidget::tr("Browse..."), QString());
 
@@ -171,7 +170,7 @@ QStringList PreviewConfigurationWidget::PreviewConfigurationWidgetPrivate::userS
 
 void PreviewConfigurationWidget::PreviewConfigurationWidgetPrivate::addUserSkins(const QStringList &files)
 {
-    if (files.empty())
+    if (files.isEmpty())
         return;
     const QStringList ::const_iterator fcend = files.constEnd();
     for (QStringList::const_iterator it = files.constBegin(); it != fcend; ++it) {
@@ -281,7 +280,7 @@ int  PreviewConfigurationWidget::PreviewConfigurationWidgetPrivate::browseSkin()
             break;
 
         // check: 1) name already there
-        const QString directory = directories.front();
+        const QString directory = directories.constFirst();
         const QString name = QFileInfo(directory).baseName();
         const int existingIndex = m_ui.m_skinCombo->findText(name);
         if (existingIndex != -1 && existingIndex != SkinComboNoneIndex &&  existingIndex != m_browseSkinIndex) {
@@ -314,13 +313,11 @@ PreviewConfigurationWidget::PreviewConfigurationWidget(QDesignerFormEditorInterf
     QGroupBox(parent),
     m_impl(new PreviewConfigurationWidgetPrivate(core, this))
 {
-    typedef void (QComboBox::*QComboIntSignal)(int);
-
     connect(m_impl->appStyleSheetChangeButton(), &QAbstractButton::clicked,
             this, &PreviewConfigurationWidget::slotEditAppStyleSheet);
     connect(m_impl->skinRemoveButton(), &QAbstractButton::clicked,
             this, &PreviewConfigurationWidget::slotDeleteSkinEntry);
-    connect(m_impl->skinCombo(), static_cast<QComboIntSignal>(&QComboBox::currentIndexChanged),
+    connect(m_impl->skinCombo(), QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &PreviewConfigurationWidget::slotSkinChanged);
 
     m_impl->retrieveSettings();

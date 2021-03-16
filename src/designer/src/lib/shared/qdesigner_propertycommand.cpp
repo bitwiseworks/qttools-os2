@@ -646,7 +646,7 @@ PropertyHelper::PropertyHelper(QObject* object,
         m_objectType = OT_Widget;
     } else {
         if (const QAction *action = qobject_cast<const QAction *>(m_object))
-            m_objectType = action->associatedWidgets().empty() ? OT_FreeAction : OT_AssociatedAction;
+            m_objectType = action->associatedWidgets().isEmpty() ? OT_FreeAction : OT_AssociatedAction;
     }
 
     if(debugPropertyCommands)
@@ -881,7 +881,7 @@ QVariant PropertyHelper::findDefaultValue(QDesignerFormWindowInterface *fw) cons
         return  m_oldValue.first; // We simply don't know the value in this case
 
     const QDesignerWidgetDataBaseItemInterface *item = fw->core()->widgetDataBase()->item(item_idx);
-    const QList<QVariant> default_prop_values = item->defaultPropertyValues();
+    const auto default_prop_values = item->defaultPropertyValues();
     if (m_index < default_prop_values.size())
         return default_prop_values.at(m_index);
 
@@ -938,12 +938,6 @@ PropertyListCommand::PropertyDescription::PropertyDescription(const QString &pro
 {
 }
 
-PropertyListCommand::PropertyDescription::PropertyDescription() :
-    m_propertyType(QVariant::Invalid),
-    m_specialProperty(SP_None)
-{
-}
-
 void PropertyListCommand::PropertyDescription::debug() const
 {
     qDebug() << m_propertyName << m_propertyGroup << m_propertyType << m_specialProperty;
@@ -984,11 +978,11 @@ bool PropertyListCommand::add(QObject *object, const QString &propertyName)
         return false;
 
     if (!sheet->isEnabled(index))
-    return false;
+        return false;
 
     const PropertyDescription description(propertyName, sheet, index);
 
-    if (m_propertyHelperList.empty()) {
+    if (m_propertyHelperList.isEmpty()) {
         // first entry
         m_propertyDescription = description;
     } else {
@@ -1010,7 +1004,7 @@ PropertyHelper *PropertyListCommand::createPropertyHelper(QObject *object, Speci
 }
 
 // Init from a list and make sure referenceObject is added first to obtain the right property group
-bool PropertyListCommand::initList(const ObjectList &list, const QString &apropertyName, QObject *referenceObject)
+bool PropertyListCommand::initList(const QObjectList &list, const QString &apropertyName, QObject *referenceObject)
 {
     propertyHelperList().clear();
 
@@ -1024,7 +1018,7 @@ bool PropertyListCommand::initList(const ObjectList &list, const QString &aprope
             add(o, apropertyName);
     }
 
-    return !propertyHelperList().empty();
+    return !propertyHelperList().isEmpty();
 }
 
 
@@ -1120,7 +1114,7 @@ template <class PropertyListIterator, class Function>
 
 
 // set a new value, return update mask
-unsigned PropertyListCommand::setValue(QVariant value, bool changed, unsigned subPropertyMask)
+unsigned PropertyListCommand::setValue(const QVariant &value, bool changed, unsigned subPropertyMask)
 {
     if(debugPropertyCommands)
         qDebug() << "PropertyListCommand::setValue(" << value
@@ -1215,7 +1209,7 @@ bool SetPropertyCommand::init(QObject *object, const QString &apropertyName, con
     return true;
 }
 
-bool SetPropertyCommand::init(const ObjectList &list, const QString &apropertyName, const QVariant &newValue,
+bool SetPropertyCommand::init(const QObjectList &list, const QString &apropertyName, const QVariant &newValue,
                               QObject *referenceObject, bool enableSubPropertyHandling)
 {
     if (!initList(list, apropertyName, referenceObject))
@@ -1325,10 +1319,10 @@ bool ResetPropertyCommand::init(QObject *object, const QString &apropertyName)
     return true;
 }
 
-bool ResetPropertyCommand::init(const ObjectList &list, const QString &apropertyName, QObject *referenceObject)
+bool ResetPropertyCommand::init(const QObjectList &list, const QString &apropertyName, QObject *referenceObject)
 {
-    ObjectList modifiedList = list; // filter out modified properties
-    for (ObjectList::iterator it = modifiedList.begin(); it != modifiedList.end() ; ) {
+    QObjectList modifiedList = list; // filter out modified properties
+    for (auto it = modifiedList.begin(); it != modifiedList.end() ; ) {
         QDesignerPropertySheetExtension* sheet = propertySheet(*it);
         Q_ASSERT(sheet);
         const int index = sheet->indexOf(apropertyName);
@@ -1338,7 +1332,7 @@ bool ResetPropertyCommand::init(const ObjectList &list, const QString &aproperty
             ++it;
     }
     if (!modifiedList.contains(referenceObject))
-        referenceObject = Q_NULLPTR;
+        referenceObject = nullptr;
     if (modifiedList.isEmpty() || !initList(modifiedList, apropertyName, referenceObject))
         return false;
 

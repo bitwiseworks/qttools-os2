@@ -56,7 +56,7 @@ static const char *uriListMimeFormatC = "text/uri-list";
 
 QT_BEGIN_NAMESPACE
 
-typedef QList<QAction *> ActionList;
+using ActionList = QList<QAction *>;
 
 // Helpers for creating toolbars and menu
 
@@ -79,8 +79,7 @@ static QToolBar *createToolBar(const QString &title, const QString &objectName, 
 // ---------------- MainWindowBase
 
 MainWindowBase::MainWindowBase(QWidget *parent, Qt::WindowFlags flags) :
-    QMainWindow(parent, flags),
-    m_policy(AcceptCloseEvents)
+    QMainWindow(parent, flags)
 {
 #ifndef Q_OS_MACOS
     setWindowIcon(qDesigner->windowIcon());
@@ -151,12 +150,11 @@ QStringList DockedMdiArea::uiFiles(const QMimeData *d) const
     QStringList rc;
     if (!d->hasFormat(QLatin1String(uriListMimeFormatC)))
         return rc;
-    const QList<QUrl> urls = d->urls();
-    if (urls.empty())
+    const auto urls = d->urls();
+    if (urls.isEmpty())
         return rc;
-    const QList<QUrl>::const_iterator cend = urls.constEnd();
-    for (QList<QUrl>::const_iterator it = urls.constBegin(); it != cend; ++it) {
-        const QString fileName = it->toLocalFile();
+    for (const auto &url : urls) {
+        const QString fileName = url.toLocalFile();
         if (!fileName.isEmpty() && fileName.endsWith(m_extension))
             rc.push_back(fileName);
     }
@@ -170,7 +168,7 @@ bool DockedMdiArea::event(QEvent *event)
     switch (event->type()) {
     case QEvent::DragEnter: {
         QDragEnterEvent *e = static_cast<QDragEnterEvent*>(event);
-        if (!uiFiles(e->mimeData()).empty()) {
+        if (!uiFiles(e->mimeData()).isEmpty()) {
             e->acceptProposedAction();
             return true;
         }
@@ -294,7 +292,7 @@ bool ToolBarManager::restoreState(const QByteArray &state, int version)
 DockedMainWindow::DockedMainWindow(QDesignerWorkbench *wb,
                                    QMenu *toolBarMenu,
                                    const QVector<QDesignerToolWindow *> &toolWindows) :
-    m_toolBarManager(0)
+    m_toolBarManager(nullptr)
 {
     setObjectName(QStringLiteral("MDIWindow"));
     setWindowTitle(mainWindowTitle());
@@ -339,7 +337,7 @@ QMdiSubWindow *DockedMainWindow::createMdiSubWindow(QWidget *fw, Qt::WindowFlags
     // designer menu actions
     if (designerCloseActionShortCut == QKeySequence(QKeySequence::Close)) {
         const ActionList systemMenuActions = rc->systemMenu()->actions();
-        if (!systemMenuActions.empty()) {
+        if (!systemMenuActions.isEmpty()) {
             const ActionList::const_iterator cend = systemMenuActions.constEnd();
             for (ActionList::const_iterator it = systemMenuActions.constBegin(); it != cend; ++it) {
                 if ( (*it)->shortcut() == designerCloseActionShortCut) {

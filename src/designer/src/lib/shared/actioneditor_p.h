@@ -67,7 +67,8 @@ class QDESIGNER_SHARED_EXPORT ActionEditor: public QDesignerActionEditorInterfac
 {
     Q_OBJECT
 public:
-    explicit ActionEditor(QDesignerFormEditorInterface *core, QWidget *parent = 0, Qt::WindowFlags flags = 0);
+    explicit ActionEditor(QDesignerFormEditorInterface *core, QWidget *parent = nullptr,
+                          Qt::WindowFlags flags = {});
     ~ActionEditor() override;
 
     QDesignerFormWindowInterface *formWindow() const;
@@ -99,7 +100,7 @@ public slots:
 private slots:
     void slotCurrentItemChanged(QAction *item);
     void slotSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
-    void editAction(QAction *item);
+    void editAction(QAction *item, int column = -1);
     void editCurrentAction();
     void navigateToSlotCurrentAction();
     void slotActionChanged();
@@ -116,12 +117,12 @@ private slots:
 #endif
 
 signals:
-    void itemActivated(QAction *item);
+    void itemActivated(QAction *item, int column);
     // Context menu for item or global menu if item == 0.
     void contextMenuRequested(QMenu *menu, QAction *item);
 
 private:
-    typedef QList<QAction *> ActionList;
+    using ActionList = QList<QAction *>;
     void deleteActions(QDesignerFormWindowInterface *formWindow, const ActionList &);
 #if QT_CONFIG(clipboard)
     void copyActions(QDesignerFormWindowInterface *formWindow, const ActionList &);

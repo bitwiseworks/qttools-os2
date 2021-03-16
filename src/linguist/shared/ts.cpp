@@ -464,7 +464,7 @@ static QString protect(const QString &str)
             result += QLatin1String("&apos;");
             break;
         default:
-            if ((c < 0x20 || (ch > 0x7f && ch.isSpace())) && c != '\n' && c != '\t')
+            if ((c < 0x20 || (ch > QChar(0x7f) && ch.isSpace())) && c != '\n' && c != '\t')
                 result += numericEntity(c);
             else // this also covers surrogates
                 result += QChar(c);
@@ -486,7 +486,7 @@ static void writeExtras(QTextStream &t, const char *indent,
     }
     outs.sort();
     foreach (const QString &out, outs)
-        t << indent << out << endl;
+        t << indent << out << Qt::endl;
 }
 
 static void writeVariants(QTextStream &t, const char *indent, const QString &input)

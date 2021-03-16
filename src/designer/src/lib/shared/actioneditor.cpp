@@ -106,7 +106,7 @@ ObjectNamingMode ActionEditor::m_objectNamingMode = Underscore; // fixme Qt 6: C
 ActionEditor::ActionEditor(QDesignerFormEditorInterface *core, QWidget *parent, Qt::WindowFlags flags) :
     QDesignerActionEditorInterface(parent, flags),
     m_core(core),
-    m_actionGroups(0),
+    m_actionGroups(nullptr),
     m_actionView(new ActionView),
     m_actionNew(new QAction(tr("New..."), this)),
     m_actionEdit(new QAction(tr("Edit..."), this)),
@@ -119,9 +119,9 @@ ActionEditor::ActionEditor(QDesignerFormEditorInterface *core, QWidget *parent, 
     m_actionSelectAll(new QAction(tr("Select all"), this)),
     m_actionDelete(new QAction(tr("Delete"), this)),
     m_viewModeGroup(new  QActionGroup(this)),
-    m_iconViewAction(0),
-    m_listViewAction(0),
-    m_filterWidget(0)
+    m_iconViewAction(nullptr),
+    m_listViewAction(nullptr),
+    m_filterWidget(nullptr)
 {
     m_actionView->initialize(m_core);
     m_actionView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -278,14 +278,14 @@ QDesignerFormWindowInterface *ActionEditor::formWindow() const
 
 void ActionEditor::setFormWindow(QDesignerFormWindowInterface *formWindow)
 {
-    if (formWindow != 0 && formWindow->mainContainer() == 0)
-        formWindow = 0;
+    if (formWindow != nullptr && formWindow->mainContainer() == nullptr)
+        formWindow = nullptr;
 
     // we do NOT rely on this function to update the action editor
     if (m_formWindow == formWindow)
         return;
 
-    if (m_formWindow != 0) {
+    if (m_formWindow != nullptr) {
         const ActionList actionList = m_formWindow->mainContainer()->findChildren<QAction*>();
         for (QAction *action : actionList)
             disconnect(action, &QAction::changed, this, &ActionEditor::slotActionChanged);
@@ -313,7 +313,7 @@ void ActionEditor::setFormWindow(QDesignerFormWindowInterface *formWindow)
 
     const ActionList actionList = formWindow->mainContainer()->findChildren<QAction*>();
     for (QAction *action : actionList)
-        if (!action->isSeparator() && core()->metaDataBase()->item(action) != 0) {
+        if (!action->isSeparator() && core()->metaDataBase()->item(action) != nullptr) {
             // Show unless it has a menu. However, listen for change on menu actions also as it might be removed
             if (!action->menu())
                 m_actionView->model()->addAction(action);
@@ -325,7 +325,7 @@ void ActionEditor::setFormWindow(QDesignerFormWindowInterface *formWindow)
 
 void  ActionEditor::slotSelectionChanged(const QItemSelection& selected, const QItemSelection& /*deselected*/)
 {
-    const bool hasSelection = !selected.indexes().empty();
+    const bool hasSelection = !selected.indexes().isEmpty();
 #if QT_CONFIG(clipboard)
     m_actionCopy->setEnabled(hasSelection);
     m_actionCut->setEnabled(hasSelection);
@@ -339,7 +339,7 @@ void ActionEditor::slotCurrentItemChanged(QAction *action)
     if (!fw)
         return;
 
-    const bool hasCurrentAction = action != 0;
+    const bool hasCurrentAction = action != nullptr;
     m_actionEdit->setEnabled(hasCurrentAction);
 
     if (!action) {
@@ -349,7 +349,7 @@ void ActionEditor::slotCurrentItemChanged(QAction *action)
 
     QDesignerObjectInspector *oi = qobject_cast<QDesignerObjectInspector *>(core()->objectInspector());
 
-    if (action->associatedWidgets().empty()) {
+    if (action->associatedWidgets().isEmpty()) {
         // Special case: action not in object tree. Deselect all and set in property editor
         fw->clearSelection(false);
         if (oi)
@@ -364,14 +364,14 @@ void ActionEditor::slotCurrentItemChanged(QAction *action)
 void ActionEditor::slotActionChanged()
 {
     QAction *action = qobject_cast<QAction*>(sender());
-    Q_ASSERT(action != 0);
+    Q_ASSERT(action != nullptr);
 
     ActionModel *model = m_actionView->model();
     const int row = model->findAction(action);
     if (row == -1) {
-        if (action->menu() == 0) // action got its menu deleted, create item
+        if (action->menu() == nullptr) // action got its menu deleted, create item
             model->addAction(action);
-    } else if (action->menu() != 0) { // action got its menu created, remove item
+    } else if (action->menu() != nullptr) { // action got its menu created, remove item
         model->removeRow(row);
     } else {
         // action text or icon changed, update item
@@ -406,7 +406,7 @@ void ActionEditor::manageAction(QAction *action)
     action->setParent(formWindow()->mainContainer());
     core()->metaDataBase()->add(action);
 
-    if (action->isSeparator() || action->menu() != 0)
+    if (action->isSeparator() || action->menu() != nullptr)
         return;
 
     QDesignerPropertySheetExtension *sheet = qt_extension<QDesignerPropertySheetExtension*>(core()->extensionManager(), action);
@@ -421,7 +421,7 @@ void ActionEditor::manageAction(QAction *action)
 void ActionEditor::unmanageAction(QAction *action)
 {
     core()->metaDataBase()->remove(action);
-    action->setParent(0);
+    action->setParent(nullptr);
 
     disconnect(action, &QAction::changed, this, &ActionEditor::slotActionChanged);
 
@@ -528,7 +528,7 @@ static inline QString textPropertyValue(const QDesignerPropertySheetExtension *s
     return ps.value();
 }
 
-void ActionEditor::editAction(QAction *action)
+void ActionEditor::editAction(QAction *action, int column)
 {
     if (!action)
         return;
@@ -545,6 +545,24 @@ void ActionEditor::editAction(QAction *action)
     oldActionData.keysequence = ActionModel::actionShortCut(sheet);
     oldActionData.checkable =  action->isCheckable();
     dlg.setActionData(oldActionData);
+
+    switch (column) {
+    case qdesigner_internal::ActionModel::NameColumn:
+        dlg.focusName();
+        break;
+    case qdesigner_internal::ActionModel::TextColumn:
+        dlg.focusText();
+        break;
+    case qdesigner_internal::ActionModel::ShortCutColumn:
+        dlg.focusShortcut();
+        break;
+    case qdesigner_internal::ActionModel::CheckedColumn:
+        dlg.focusCheckable();
+        break;
+    case qdesigner_internal::ActionModel::ToolTipColumn:
+        dlg.focusTooltip();
+        break;
+    }
 
     if (!dlg.exec())
         return;
@@ -602,8 +620,9 @@ void ActionEditor::deleteActions(QDesignerFormWindowInterface *fw, const ActionL
 {
     // We need a macro even in the case of single action because the commands might cause the
     // scheduling of other commands (signal slots connections)
-    const QString description = actions.size() == 1 ?
-        tr("Remove action '%1'").arg(actions.front()->objectName()) : tr("Remove actions");
+    const QString description = actions.size() == 1
+        ? tr("Remove action '%1'").arg(actions.constFirst()->objectName())
+        : tr("Remove actions");
     fw->beginCommand(description);
     for (QAction *action : actions) {
         RemoveActionCommand *cmd = new RemoveActionCommand(fw);
@@ -644,7 +663,7 @@ void ActionEditor::slotDelete()
         return;
 
     const ActionView::ActionList selection = m_actionView->selectedActions();
-    if (selection.empty())
+    if (selection.isEmpty())
         return;
 
     deleteActions(fw,  selection);
@@ -728,7 +747,7 @@ void ActionEditor::mainContainerChanged()
 {
     // Invalidate references to objects kept in model
     if (sender() == formWindow())
-        setFormWindow(0);
+        setFormWindow(nullptr);
 }
 
 void ActionEditor::slotViewMode(QAction *a)
@@ -784,7 +803,7 @@ void ActionEditor::slotCopy()
         return;
 
     const ActionView::ActionList selection = m_actionView->selectedActions();
-    if (selection.empty())
+    if (selection.isEmpty())
         return;
 
     copyActions(fw, selection);
@@ -797,7 +816,7 @@ void ActionEditor::slotCut()
         return;
 
     const ActionView::ActionList selection = m_actionView->selectedActions();
-    if (selection.empty())
+    if (selection.isEmpty())
         return;
 
     copyActions(fw, selection);
@@ -826,7 +845,7 @@ void ActionEditor::slotContextMenuRequested(QContextMenuEvent *e, QAction *item)
     // Associated Widgets
     if (QAction *action = m_actionView->currentAction()) {
         const QWidgetList associatedWidgets = ActionModel::associatedWidgets(action);
-        if (!associatedWidgets.empty()) {
+        if (!associatedWidgets.isEmpty()) {
             QMenu *associatedWidgetsSubMenu =  menu.addMenu(tr("Used In"));
             for (QWidget *w : associatedWidgets) {
                 associatedWidgetsSubMenu->addAction(w->objectName(),

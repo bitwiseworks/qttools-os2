@@ -42,10 +42,7 @@ QT_BEGIN_NAMESPACE
 
 enum { debugAssistantClient = 0 };
 
-AssistantClient::AssistantClient() :
-    m_process(0)
-{
-}
+AssistantClient::AssistantClient() = default;
 
 AssistantClient::~AssistantClient()
 {
@@ -88,7 +85,7 @@ bool AssistantClient::sendCommand(const QString &cmd, QString *errorMessage)
         return false;
     }
     QTextStream str(m_process);
-    str << cmd << QLatin1Char('\n') << endl;
+    str << cmd << QLatin1Char('\n') << Qt::endl;
     return true;
 }
 

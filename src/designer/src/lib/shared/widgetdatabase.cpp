@@ -348,8 +348,8 @@ static WidgetDataBaseItem *createCustomWidgetItem(const QDesignerCustomWidgetInt
 void WidgetDataBase::loadPlugins()
 {
     typedef QMap<QString, int> NameIndexMap;
-    typedef QList<QDesignerWidgetDataBaseItemInterface*> ItemList;
-    typedef QSet<QString> NameSet;
+    using ItemList = QList<QDesignerWidgetDataBaseItemInterface *>;
+    using NameSet = QSet<QString>;
     // 1) create a map of existing custom classes
     NameIndexMap existingCustomClasses;
     NameSet nonCustomClasses;
@@ -373,10 +373,8 @@ void WidgetDataBase::loadPlugins()
     unsigned replacedPlugins = 0;
     unsigned addedPlugins = 0;
     unsigned removedPlugins = 0;
-    if (!pluginList.empty()) {
-        ItemList::const_iterator cend = pluginList.constEnd();
-        for (ItemList::const_iterator it = pluginList.constBegin();it != cend; ++it )  {
-            QDesignerWidgetDataBaseItemInterface* pluginItem = *it;
+    if (!pluginList.isEmpty()) {
+        for (QDesignerWidgetDataBaseItemInterface *pluginItem : qAsConst(pluginList)) {
             const QString pluginName = pluginItem->name();
             NameIndexMap::iterator existingIt = existingCustomClasses.find(pluginName);
             if (existingIt == existingCustomClasses.end()) {
@@ -399,7 +397,7 @@ void WidgetDataBase::loadPlugins()
         }
     }
     // 4) remove classes that have not been matched. The stored indexes become invalid while deleting.
-    if (!existingCustomClasses.empty()) {
+    if (!existingCustomClasses.isEmpty()) {
         NameIndexMap::const_iterator cend = existingCustomClasses.constEnd();
         for (NameIndexMap::const_iterator it = existingCustomClasses.constBegin();it != cend; ++it )  {
             const int index = indexOfClassName(it.key());
@@ -424,15 +422,15 @@ QList<QVariant> WidgetDataBase::defaultPropertyValues(const QString &name)
     WidgetFactory *factory = qobject_cast<WidgetFactory *>(m_core->widgetFactory());
     Q_ASSERT(factory);
     // Create non-widgets, widgets in order
-    QObject* object = factory->createObject(name, 0);
+    QObject* object = factory->createObject(name, nullptr);
     if (!object)
-        object = factory->createWidget(name, 0);
+        object = factory->createWidget(name, nullptr);
     if (!object) {
         qDebug() << "** WARNING Factory failed to create " << name;
-        return QList<QVariant>();
+        return {};
     }
     // Get properties from sheet.
-    QList<QVariant> result;
+    QVariantList result;
     if (const QDesignerPropertySheetExtension *sheet = qt_extension<QDesignerPropertySheetExtension*>(m_core->extensionManager(), object)) {
         const int propertyCount = sheet->count();
         for (int i = 0; i < propertyCount; ++i) {
@@ -448,7 +446,7 @@ void WidgetDataBase::grabDefaultPropertyValues()
     const int itemCount = count();
     for (int i = 0; i < itemCount; ++i) {
         QDesignerWidgetDataBaseItemInterface *dbItem = item(i);
-        const QList<QVariant> default_prop_values = defaultPropertyValues(dbItem->name());
+        const auto default_prop_values = defaultPropertyValues(dbItem->name());
         dbItem->setDefaultPropertyValues(default_prop_values);
     }
 }
@@ -503,7 +501,7 @@ static inline bool suitableForNewForm(const QString &className)
 QStringList WidgetDataBase::formWidgetClasses(const QDesignerFormEditorInterface *core)
 {
     static QStringList rc;
-    if (rc.empty()) {
+    if (rc.isEmpty()) {
         const QDesignerWidgetDataBaseInterface *wdb = core->widgetDataBase();
         const int widgetCount = wdb->count();
         for (int i = 0; i < widgetCount; i++) {
@@ -539,7 +537,7 @@ QStringList WidgetDataBase::customFormWidgetClasses(const QDesignerFormEditorInt
 // properties to be suitable for new forms
 static QString xmlFromWidgetBox(const QDesignerFormEditorInterface *core, const QString &className, const QString &objectName)
 {
-    typedef QList<DomProperty*> PropertyList;
+    using PropertyList = QList<DomProperty *>;
 
     QDesignerWidgetBoxInterface::Widget widget;
     const bool found = QDesignerWidgetBox::findWidget(core->widgetBox(), className, QString(), &widget);
@@ -601,22 +599,22 @@ static QString xmlFromWidgetBox(const QDesignerFormEditorInterface *core, const 
 // Generate default standard ui new form xml based on the class passed on as similarClassName.
 static QString generateNewFormXML(const QString &className, const QString &similarClassName, const QString &name)
 {
-    QString rc; {
-        QTextStream str(&rc);
-        str << QStringLiteral("<ui version=\"4.0\" >\n<class>") << name << QStringLiteral("</class>\n")
-            <<  QStringLiteral("<widget class=\"") << className << QStringLiteral("\" name=\"") << name << QStringLiteral("\" >\n")
-            <<  QStringLiteral("<property name=\"geometry\" >\n<rect><x>0</x><y>0</y><width>")
-            << NewFormWidth << QStringLiteral("</width><height>") << NewFormHeight << QStringLiteral("</height></rect>\n</property>\n");
-        str << QStringLiteral("<property name=\"windowTitle\" >\n<string>") << name << QStringLiteral("</string>\n</property>\n");
+    QString rc;
+    QTextStream str(&rc);
+    str << R"(<ui version="4.0"><class>)" << name << "</class>"
+        << R"(<widget class=")" << className << R"(" name=")" << name << R"(">)"
+        << R"(<property name="geometry" ><rect><x>0</x><y>0</y><width>)"
+        << NewFormWidth << "</width><height>" << NewFormHeight << "</height></rect></property>"
+        << R"(<property name="windowTitle"><string>)" << name << "</string></property>\n";
 
-        if (similarClassName == QStringLiteral("QMainWindow")) {
-            str << QStringLiteral("<widget class=\"QWidget\" name=\"centralwidget\" />\n");
-        } else {
-            if (similarClassName == QStringLiteral("QWizard"))
-                str << QStringLiteral("<widget class=\"QWizardPage\" name=\"wizardPage1\" /><widget class=\"QWizardPage\" name=\"wizardPage2\" />\n");
-        }
-        str << QStringLiteral("</widget>\n</ui>\n");
+    if (similarClassName == QLatin1String("QMainWindow")) {
+        str << R"(<widget class="QWidget" name="centralwidget"/>)";
+    } else if (similarClassName == QLatin1String("QWizard")) {
+        str << R"(<widget class="QWizardPage" name="wizardPage1"/><widget class="QWizardPage" name="wizardPage2"/>)";
+    } else if (similarClassName == QLatin1String("QDockWidget")) {
+        str << R"(<widget class="QWidget" name="dockWidgetContents"/>)";
     }
+    str << "</widget></ui>\n";
     return rc;
 }
 
@@ -645,7 +643,7 @@ QString WidgetDataBase::formTemplate(const QDesignerFormEditorInterface *core, c
 // Set a fixed size on a XML template
 QString WidgetDataBase::scaleFormTemplate(const QString &xml, const QSize &size, bool fixed)
 {
-    DomUI *domUI = QDesignerWidgetBox::xmlToUi(QStringLiteral("Form"), xml, false);
+    QScopedPointer<DomUI> domUI(QDesignerWidgetBox::xmlToUi(QStringLiteral("Form"), xml, false));
     if (!domUI)
         return QString();
     DomWidget *domWidget = domUI->elementWidget();
@@ -655,9 +653,9 @@ QString WidgetDataBase::scaleFormTemplate(const QString &xml, const QSize &size,
     const QString geometryPropertyName = QStringLiteral("geometry");
     const QString minimumSizePropertyName = QStringLiteral("minimumSize");
     const QString maximumSizePropertyName = QStringLiteral("maximumSize");
-    DomProperty *geomProperty = 0;
-    DomProperty *minimumSizeProperty = 0;
-    DomProperty *maximumSizeProperty = 0;
+    DomProperty *geomProperty = nullptr;
+    DomProperty *minimumSizeProperty = nullptr;
+    DomProperty *maximumSizeProperty = nullptr;
 
     auto properties = domWidget->elementProperty();
     for (DomProperty *p : properties) {
@@ -723,7 +721,6 @@ QString WidgetDataBase::scaleFormTemplate(const QString &xml, const QSize &size,
         writer.writeEndDocument();
     }
 
-    delete domUI;
     return rc;
 }
 
@@ -768,10 +765,10 @@ QDESIGNER_SHARED_EXPORT QDesignerWidgetDataBaseItemInterface *
     if (className.isEmpty() || baseClassName.isEmpty()) {
         qWarning("** WARNING %s called with an empty class names: '%s' extends '%s'.",
                  Q_FUNC_INFO, className.toUtf8().constData(), baseClassName.toUtf8().constData());
-        return 0;
+        return nullptr;
     }
     // Check whether item already exists.
-    QDesignerWidgetDataBaseItemInterface *derivedItem = 0;
+    QDesignerWidgetDataBaseItemInterface *derivedItem = nullptr;
     const int existingIndex = db->indexOfClassName(className);
     if ( existingIndex != -1)
         derivedItem =  db->item(existingIndex);
@@ -800,7 +797,7 @@ QDESIGNER_SHARED_EXPORT QDesignerWidgetDataBaseItemInterface *
     if (baseIndex == -1) {
         if (debugWidgetDataBase)
             qDebug() << "appendDerived failed due to missing base class";
-        return 0;
+        return nullptr;
     }
     const QDesignerWidgetDataBaseItemInterface *baseItem = db->item(baseIndex);
     derivedItem = WidgetDataBaseItem::clone(baseItem);
