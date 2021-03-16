@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
+** Copyright (C) 2020 The Qt Company Ltd.
 ** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the Qt Assistant of the Qt Toolkit.
@@ -60,7 +60,6 @@
 
 #include <QtWidgets/QAction>
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QDesktopWidget>
 #include <QtWidgets/QDockWidget>
 #include <QtGui/QFontDatabase>
 #include <QtGui/QImageReader>
@@ -556,7 +555,9 @@ void MainWindow::setupActions()
     tmp->setMenuRole(QAction::QuitRole);
 
     menu = menuBar()->addMenu(tr("&Edit"));
+#if QT_CONFIG(clipboard)
     menu->addAction(globalActions->copyAction());
+#endif
     menu->addAction(globalActions->findAction());
 
     QAction *findNextAction = menu->addAction(tr("Find &Next"),
@@ -610,12 +611,12 @@ void MainWindow::setupActions()
     tmp = menu->addAction(tr("Next Page"),
             openPages, &OpenPagesManager::nextPage);
     tmp->setShortcuts(QList<QKeySequence>() << QKeySequence(tr("Ctrl+Alt+Right"))
-        << QKeySequence(Qt::CTRL + Qt::Key_PageDown));
+        << QKeySequence(Qt::CTRL | Qt::Key_PageDown));
 
     tmp = menu->addAction(tr("Previous Page"),
             openPages, &OpenPagesManager::previousPage);
     tmp->setShortcuts(QList<QKeySequence>() << QKeySequence(tr("Ctrl+Alt+Left"))
-        << QKeySequence(Qt::CTRL + Qt::Key_PageUp));
+        << QKeySequence(Qt::CTRL | Qt::Key_PageUp));
 
     const Qt::Modifier modifier =
 #ifdef Q_OS_MAC
@@ -624,10 +625,10 @@ void MainWindow::setupActions()
             Qt::CTRL;
 #endif
 
-    QShortcut *sct = new QShortcut(QKeySequence(modifier + Qt::Key_Tab), this);
+    QShortcut *sct = new QShortcut(QKeySequence(modifier | Qt::Key_Tab), this);
     connect(sct, &QShortcut::activated,
             openPages, &OpenPagesManager::nextPageWithSwitcher);
-    sct = new QShortcut(QKeySequence(modifier + Qt::SHIFT + Qt::Key_Tab), this);
+    sct = new QShortcut(QKeySequence(modifier | Qt::SHIFT | Qt::Key_Tab), this);
     connect(sct, &QShortcut::activated,
             openPages, &OpenPagesManager::previousPageWithSwitcher);
 
@@ -650,7 +651,9 @@ void MainWindow::setupActions()
     navigationBar->addAction(globalActions->homeAction());
     navigationBar->addAction(m_syncAction);
     navigationBar->addSeparator();
+#if QT_CONFIG(clipboard)
     navigationBar->addAction(globalActions->copyAction());
+#endif
     navigationBar->addAction(globalActions->printAction());
     navigationBar->addAction(globalActions->findAction());
     navigationBar->addSeparator();
@@ -668,8 +671,10 @@ void MainWindow::setupActions()
 #endif
 
     // content viewer connections
+#if QT_CONFIG(clipboard)
     connect(m_centralWidget, &CentralWidget::copyAvailable,
             globalActions, &GlobalActions::setCopyAvailable);
+#endif
     connect(m_centralWidget, &CentralWidget::currentViewerChanged,
             globalActions, &GlobalActions::updateActions);
     connect(m_centralWidget, &CentralWidget::forwardAvailable,
@@ -677,12 +682,12 @@ void MainWindow::setupActions()
     connect(m_centralWidget, &CentralWidget::backwardAvailable,
             globalActions, &GlobalActions::updateActions);
     connect(m_centralWidget, &CentralWidget::highlighted,
-            this, [this](const QString &link) { statusBar()->showMessage(link);} );
+            this, [this](const QUrl &link) { statusBar()->showMessage(link.toString());} );
 
     // index window
     connect(m_indexWindow, &IndexWindow::linkActivated,
             m_centralWidget, &CentralWidget::setSource);
-    connect(m_indexWindow, &IndexWindow::linksActivated,
+    connect(m_indexWindow, &IndexWindow::documentsActivated,
             this, &MainWindow::showTopicChooser);
     connect(m_indexWindow, &IndexWindow::escapePressed,
             this, &MainWindow::activateCurrentCentralWidgetTab);
@@ -822,11 +827,11 @@ void MainWindow::gotoAddress()
     m_centralWidget->setSource(m_addressLineEdit->text());
 }
 
-void MainWindow::showTopicChooser(const QMap<QString, QUrl> &links,
+void MainWindow::showTopicChooser(const QList<QHelpLink> &documents,
                                   const QString &keyword)
 {
     TRACE_OBJ
-    TopicChooser tc(this, keyword, links);
+    TopicChooser tc(this, keyword, documents);
     if (tc.exec() == QDialog::Accepted) {
         m_centralWidget->setSource(tc.link());
     }
@@ -842,7 +847,7 @@ void MainWindow::showPreferences()
             m_centralWidget, &CentralWidget::updateBrowserFont);
     connect(&dia, &PreferencesDialog::updateUserInterface,
             m_centralWidget, &CentralWidget::updateUserInterface);
-    dia.showDialog();
+    dia.exec();
 }
 
 void MainWindow::syncContents()
@@ -907,7 +912,7 @@ void MainWindow::showAboutDialog()
             "<p>Version %2</p>"
             "<p>Browser: %3</p></center>"
             "<p>Copyright (C) %4 The Qt Company Ltd.</p>")
-            .arg(tr("Qt Assistant"), QLatin1String(QT_VERSION_STR), browser, QStringLiteral("2019")),
+            .arg(tr("Qt Assistant"), QLatin1String(QT_VERSION_STR), browser, QStringLiteral("2020")),
             resources);
         QLatin1String path(":/qt-project.org/assistant/images/assistant-128.png");
         aboutDia.setPixmap(QString(path));

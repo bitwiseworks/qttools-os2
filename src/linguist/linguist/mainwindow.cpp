@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
+** Copyright (C) 2020 The Qt Company Ltd.
 ** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the Qt Linguist of the Qt Toolkit.
@@ -299,7 +299,6 @@ MainWindow::MainWindow()
     m_contextDock = new QDockWidget(this);
     m_contextDock->setObjectName(QLatin1String("ContextDockWidget"));
     m_contextDock->setAllowedAreas(Qt::AllDockWidgetAreas);
-    m_contextDock->setFeatures(QDockWidget::AllDockWidgetFeatures);
     m_contextDock->setWindowTitle(tr("Context"));
     m_contextDock->setAcceptDrops(true);
     m_contextDock->installEventFilter(this);
@@ -329,7 +328,6 @@ MainWindow::MainWindow()
     m_messagesDock = new QDockWidget(this);
     m_messagesDock->setObjectName(QLatin1String("StringsDockWidget"));
     m_messagesDock->setAllowedAreas(Qt::AllDockWidgetAreas);
-    m_messagesDock->setFeatures(QDockWidget::AllDockWidgetFeatures);
     m_messagesDock->setWindowTitle(tr("Strings"));
     m_messagesDock->setAcceptDrops(true);
     m_messagesDock->installEventFilter(this);
@@ -366,7 +364,6 @@ MainWindow::MainWindow()
     m_phrasesDock = new QDockWidget(this);
     m_phrasesDock->setObjectName(QLatin1String("PhrasesDockwidget"));
     m_phrasesDock->setAllowedAreas(Qt::AllDockWidgetAreas);
-    m_phrasesDock->setFeatures(QDockWidget::AllDockWidgetFeatures);
     m_phrasesDock->setWindowTitle(tr("Phrases and guesses"));
 
     m_phraseView = new PhraseView(m_dataModel, &m_phraseDict, this);
@@ -376,7 +373,6 @@ MainWindow::MainWindow()
     m_sourceAndFormDock = new QDockWidget(this);
     m_sourceAndFormDock->setObjectName(QLatin1String("SourceAndFormDock"));
     m_sourceAndFormDock->setAllowedAreas(Qt::AllDockWidgetAreas);
-    m_sourceAndFormDock->setFeatures(QDockWidget::AllDockWidgetFeatures);
     m_sourceAndFormDock->setWindowTitle(tr("Sources and Forms"));
     m_sourceAndFormView = new QStackedWidget(this);
     m_sourceAndFormDock->setWidget(m_sourceAndFormView);
@@ -391,7 +387,6 @@ MainWindow::MainWindow()
     m_errorsDock = new QDockWidget(this);
     m_errorsDock->setObjectName(QLatin1String("ErrorsDockWidget"));
     m_errorsDock->setAllowedAreas(Qt::AllDockWidgetAreas);
-    m_errorsDock->setFeatures(QDockWidget::AllDockWidgetFeatures);
     m_errorsDock->setWindowTitle(tr("Warnings"));
     m_errorsView = new ErrorsView(m_dataModel, this);
     m_errorsDock->setWidget(m_errorsView);
@@ -1279,9 +1274,6 @@ void MainWindow::printPhraseBook(QAction *action)
 
 void MainWindow::addToPhraseBook()
 {
-    MessageItem *currentMessage = m_dataModel->messageItem(m_currentIndex);
-    Phrase *phrase = new Phrase(currentMessage->text(), currentMessage->translation(),
-                                QString(), nullptr);
     QStringList phraseBookList;
     QHash<QString, PhraseBook *> phraseBookHash;
     foreach (PhraseBook *pb, m_phraseBooks) {
@@ -1300,20 +1292,31 @@ void MainWindow::addToPhraseBook()
     if (phraseBookList.isEmpty()) {
         QMessageBox::warning(this, tr("Add to phrase book"),
               tr("No appropriate phrasebook found."));
-    } else if (phraseBookList.size() == 1) {
+        return;
+    }
+
+    QString selectedPhraseBook;
+    if (phraseBookList.size() == 1) {
+        selectedPhraseBook = phraseBookList.at(0);
         if (QMessageBox::information(this, tr("Add to phrase book"),
-              tr("Adding entry to phrasebook %1").arg(phraseBookList.at(0)),
+              tr("Adding entry to phrasebook %1").arg(selectedPhraseBook),
                QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Ok)
-                              == QMessageBox::Ok)
-            phraseBookHash.value(phraseBookList.at(0))->append(phrase);
+                              != QMessageBox::Ok)
+            return;
     } else {
         bool okPressed = false;
-        QString selection = QInputDialog::getItem(this, tr("Add to phrase book"),
+        QString selectedPhraseBook = QInputDialog::getItem(this, tr("Add to phrase book"),
                                 tr("Select phrase book to add to"),
                                 phraseBookList, 0, false, &okPressed);
-        if (okPressed)
-            phraseBookHash.value(selection)->append(phrase);
+        if (!okPressed)
+            return;
     }
+
+    MessageItem *currentMessage = m_dataModel->messageItem(m_currentIndex);
+    Phrase *phrase = new Phrase(currentMessage->text(), currentMessage->translation(),
+                                QString(), nullptr);
+
+    phraseBookHash.value(selectedPhraseBook)->append(phrase);
 }
 
 void MainWindow::resetSorting()
@@ -1347,7 +1350,7 @@ void MainWindow::manual()
         << (QT_VERSION >> 16) << ((QT_VERSION >> 8) & 0xFF)
         << (QT_VERSION & 0xFF)
         << QLatin1String("/qtlinguist/qtlinguist-index.html")
-        << QLatin1Char('\n') << endl;
+        << QLatin1Char('\n') << Qt::endl;
 }
 
 void MainWindow::about()
@@ -1360,7 +1363,7 @@ void MainWindow::about()
     const QString description
             = tr("Qt Linguist is a tool for adding translations to Qt applications.");
     const QString copyright
-            = tr("Copyright (C) %1 The Qt Company Ltd.").arg(QStringLiteral("2019"));
+            = tr("Copyright (C) %1 The Qt Company Ltd.").arg(QStringLiteral("2020"));
     box.setText(QStringLiteral("<center><img src=\":/images/icons/linguist-128-32.png\"/></img><p>%1</p></center>"
                                "<p>%2</p>"
                                "<p>%3</p>").arg(version, description, copyright));
@@ -2809,7 +2812,7 @@ bool MainWindow::eventFilter(QObject *object, QEvent *event)
     } else if (event->type() == QEvent::Wheel) {
         QWheelEvent *we = static_cast<QWheelEvent *>(event);
         if (we->modifiers() & Qt::ControlModifier) {
-            if (we->delta() > 0)
+            if (we->angleDelta().y() > 0)
                 m_messageEditor->increaseFontSize();
             else
                 m_messageEditor->decreaseFontSize();

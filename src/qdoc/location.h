@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2016 The Qt Company Ltd.
+** Copyright (C) 2019 The Qt Company Ltd.
 ** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
@@ -33,12 +33,11 @@
 #ifndef LOCATION_H
 #define LOCATION_H
 
-#include <qstack.h>
-#include <qcoreapplication.h>
+#include <QtCore/qcoreapplication.h>
+#include <QtCore/qstack.h>
 
 QT_BEGIN_NAMESPACE
 
-class Config;
 class QRegExp;
 
 class Location
@@ -47,17 +46,21 @@ class Location
 
 public:
     Location();
-    Location(const QString& filePath);
-    Location(const Location& other);
+    Location(const QString &filePath);
+    Location(const Location &other);
     ~Location() { delete stk; }
 
-    Location& operator=(const Location& other);
+    Location &operator=(const Location &other);
 
     void start();
     void advance(QChar ch);
-    void advanceLines(int n) { stkTop->lineNo += n; stkTop->columnNo = 1; }
+    void advanceLines(int n)
+    {
+        stkTop->lineNo += n;
+        stkTop->columnNo = 1;
+    }
 
-    void push(const QString& filePath);
+    void push(const QString &filePath);
     void pop();
     void setEtc(bool etc) { etcetera = etc; }
     void setLineNo(int no) { stkTop->lineNo = no; }
@@ -65,31 +68,22 @@ public:
 
     bool isEmpty() const { return stkDepth == 0; }
     int depth() const { return stkDepth; }
-    const QString& filePath() const { return stkTop->filePath; }
+    const QString &filePath() const { return stkTop->filePath; }
     QString fileName() const;
     QString fileSuffix() const;
     int lineNo() const { return stkTop->lineNo; }
     int columnNo() const { return stkTop->columnNo; }
     bool etc() const { return etcetera; }
-    void warning(const QString& message,
-                 const QString& details = QString()) const;
-    void error(const QString& message,
-               const QString& details = QString()) const;
-    void fatal(const QString& message,
-               const QString& details = QString()) const;
-    void report(const QString& message,
-                const QString& details = QString()) const;
+    void warning(const QString &message, const QString &details = QString()) const;
+    void error(const QString &message, const QString &details = QString()) const;
+    void fatal(const QString &message, const QString &details = QString()) const;
+    void report(const QString &message, const QString &details = QString()) const;
 
-    static const Location null;
+    static void initialize();
 
-    static void initialize(const Config& config);
     static void terminate();
-    static void information(const QString& message);
-    static void internalError(const QString& hint);
-    static void logToStdErr(const QString& message);
-    static void logToStdErrAlways(const QString& message);
-    static void startLoggingProgress() { logProgress_ = true; }
-    static void stopLoggingProgress() { logProgress_ = false; }
+    static void information(const QString &message);
+    static void internalError(const QString &hint);
     static QString canonicalRelativePath(const QString &path);
     static int exitCode();
 
@@ -104,9 +98,7 @@ private:
     };
     friend class QTypeInfo<StackEntry>;
 
-    void emitMessage(MessageType type,
-                     const QString& message,
-                     const QString& details) const;
+    void emitMessage(MessageType type, const QString &message, const QString &details) const;
     QString toString() const;
     QString top() const;
 
@@ -123,7 +115,6 @@ private:
     static QString programName;
     static QString project;
     static QRegExp *spuriousRegExp;
-    static bool logProgress_;
 };
 Q_DECLARE_TYPEINFO(Location::StackEntry, Q_MOVABLE_TYPE);
 Q_DECLARE_TYPEINFO(Location, Q_COMPLEX_TYPE); // stkTop = &stkBottom

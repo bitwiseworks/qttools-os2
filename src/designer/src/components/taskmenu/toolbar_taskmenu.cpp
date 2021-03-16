@@ -51,14 +51,14 @@ namespace qdesigner_internal {
 
     QAction *ToolBarTaskMenu::preferredEditAction() const
     {
-        return 0;
+        return nullptr;
     }
 
     QList<QAction*> ToolBarTaskMenu::taskActions() const
     {
         if (ToolBarEventFilter *ef = ToolBarEventFilter::eventFilterOf(m_toolBar))
             return ef->contextMenuActions();
-        return QList<QAction*>();
+        return {};
     }
 
     // ------------ StatusBarTaskMenu
@@ -73,7 +73,7 @@ namespace qdesigner_internal {
 
     QAction *StatusBarTaskMenu::preferredEditAction() const
     {
-        return 0;
+        return nullptr;
     }
 
     QList<QAction*> StatusBarTaskMenu::taskActions() const

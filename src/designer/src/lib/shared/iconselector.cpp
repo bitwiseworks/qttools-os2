@@ -55,6 +55,7 @@
 #include <QtWidgets/qlabel.h>
 #include <QtGui/qvalidator.h>
 #include <QtCore/qdebug.h>
+#include <QtCore/qvector.h>
 
 
 QT_BEGIN_NAMESPACE
@@ -85,7 +86,7 @@ private:
 };
 
 LanguageResourceDialogPrivate::LanguageResourceDialogPrivate(QDesignerResourceBrowserInterface *rb) :
-    q_ptr(0),
+    q_ptr(nullptr),
     m_browser(rb),
     m_dialogButtonBox(new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel))
 {
@@ -158,11 +159,11 @@ QString LanguageResourceDialog::currentPath() const
 LanguageResourceDialog* LanguageResourceDialog::create(QDesignerFormEditorInterface *core, QWidget *parent)
 {
     if (QDesignerLanguageExtension *lang = qt_extension<QDesignerLanguageExtension *>(core->extensionManager(), core))
-        if (QDesignerResourceBrowserInterface *rb = lang->createResourceBrowser(0))
+        if (QDesignerResourceBrowserInterface *rb = lang->createResourceBrowser(nullptr))
             return new LanguageResourceDialog(rb, parent);
-    if (QDesignerResourceBrowserInterface *rb = core->integration()->createResourceBrowser(0))
+    if (QDesignerResourceBrowserInterface *rb = core->integration()->createResourceBrowser(nullptr))
         return new LanguageResourceDialog(rb, parent);
-    return 0;
+    return nullptr;
 }
 
 // ------------ IconSelectorPrivate
@@ -176,10 +177,10 @@ static inline QPixmap emptyPixmap()
 
 class IconSelectorPrivate
 {
-    IconSelector *q_ptr;
+    IconSelector *q_ptr = nullptr;
     Q_DECLARE_PUBLIC(IconSelector)
 public:
-    IconSelectorPrivate();
+    IconSelectorPrivate() = default;
 
     void slotStateActivated();
     void slotSetActivated();
@@ -189,36 +190,23 @@ public:
     void slotResetAllActivated();
     void slotUpdate();
 
-    QList<QPair<QPair<QIcon::Mode, QIcon::State>, QString> > m_stateToName; // could be static map
+    QVector<QPair<QPair<QIcon::Mode, QIcon::State>, QString> > m_stateToName; // could be static map
 
     QMap<QPair<QIcon::Mode, QIcon::State>, int>  m_stateToIndex;
     QMap<int, QPair<QIcon::Mode, QIcon::State> > m_indexToState;
 
     const QIcon m_emptyIcon;
-    QComboBox *m_stateComboBox;
-    QToolButton *m_iconButton;
-    QAction *m_resetAction;
-    QAction *m_resetAllAction;
+    QComboBox *m_stateComboBox = nullptr;
+    QToolButton *m_iconButton = nullptr;
+    QAction *m_resetAction = nullptr;
+    QAction *m_resetAllAction = nullptr;
     PropertySheetIconValue m_icon;
-    DesignerIconCache *m_iconCache;
-    DesignerPixmapCache *m_pixmapCache;
-    QtResourceModel *m_resourceModel;
-    QDesignerFormEditorInterface *m_core;
+    DesignerIconCache *m_iconCache = nullptr;
+    DesignerPixmapCache *m_pixmapCache = nullptr;
+    QtResourceModel *m_resourceModel = nullptr;
+    QDesignerFormEditorInterface *m_core = nullptr;
 };
 
-IconSelectorPrivate::IconSelectorPrivate() :
-    q_ptr(0),
-    m_emptyIcon(emptyPixmap()),
-    m_stateComboBox(0),
-    m_iconButton(0),
-    m_resetAction(0),
-    m_resetAllAction(0),
-    m_iconCache(0),
-    m_pixmapCache(0),
-    m_resourceModel(0),
-    m_core(0)
-{
-}
 void IconSelectorPrivate::slotUpdate()
 {
     QIcon icon;
@@ -342,7 +330,7 @@ bool IconSelector::checkPixmap(const QString &fileName, CheckMode cm, QString *e
 static QString imageFilter()
 {
     QString filter = QApplication::translate("IconSelector", "All Pixmaps (");
-    const QList<QByteArray> supportedImageFormats = QImageReader::supportedImageFormats();
+    const auto supportedImageFormats = QImageReader::supportedImageFormats();
     const QString jpeg = QStringLiteral("JPEG");
     const int count = supportedImageFormats.count();
     for (int i = 0; i< count; ++i) {
@@ -524,7 +512,7 @@ void IconSelector::setPixmapCache(DesignerPixmapCache *pixmapCache)
 // Validator for theme line edit, accepts empty or non-blank strings.
 class BlankSuppressingValidator : public QValidator {
 public:
-    explicit BlankSuppressingValidator(QObject * parent = 0) : QValidator(parent) {}
+    explicit BlankSuppressingValidator(QObject * parent = nullptr) : QValidator(parent) {}
 
     State validate(QString &input, int &pos) const override
     {
@@ -603,8 +591,7 @@ void IconThemeEditor::updatePreview(const QString &t)
 {
     // Update preview label with icon.
     if (t.isEmpty() || !QIcon::hasThemeIcon(t)) { // Empty
-        const QPixmap *currentPixmap = d->m_themeLabel->pixmap();
-        if (currentPixmap == 0 || currentPixmap->cacheKey() != d->m_emptyPixmap.cacheKey())
+        if (d->m_themeLabel->pixmap(Qt::ReturnByValue).cacheKey() != d->m_emptyPixmap.cacheKey())
             d->m_themeLabel->setPixmap(d->m_emptyPixmap);
     } else {
         const QIcon icon = QIcon::fromTheme(t);

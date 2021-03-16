@@ -42,7 +42,7 @@
 
 QT_BEGIN_NAMESPACE
 
-typedef QPair<QString, QString> ClassNameSignaturePair;
+using ClassNameSignaturePair = QPair<QString, QString>;
 
 // Find all member functions that match a predicate on the signature string
 // using the member sheet and the fake methods stored in the widget
@@ -61,7 +61,7 @@ static void memberList(QDesignerFormEditorInterface *core,
         return;
     // 1) member sheet
     const QDesignerMemberSheetExtension *members = qt_extension<QDesignerMemberSheetExtension*>(core->extensionManager(), object);
-    Q_ASSERT(members != 0);
+    Q_ASSERT(members != nullptr);
     const int count = members->count();
     for (int i = 0; i < count; ++i) {
         if (!members->isVisible(i))
@@ -93,7 +93,7 @@ static void memberList(QDesignerFormEditorInterface *core,
     const QString className = wdbItem->name();
 
     const QStringList wdbFakeMethods = member_type == qdesigner_internal::SlotMember ? wdbItem->fakeSlots() : wdbItem->fakeSignals();
-    if (!wdbFakeMethods.empty())
+    if (!wdbFakeMethods.isEmpty())
         for (const QString &fakeMethod : wdbFakeMethods)
             if (predicate(fakeMethod)) {
                 *it = ClassNameSignaturePair(className, fakeMethod);
@@ -106,7 +106,7 @@ static void memberList(QDesignerFormEditorInterface *core,
 
     if (const qdesigner_internal::MetaDataBaseItem *mdbItem = metaDataBase->metaDataBaseItem(object)) {
         const QStringList mdbFakeMethods =  member_type == qdesigner_internal::SlotMember ? mdbItem->fakeSlots() : mdbItem->fakeSignals();
-        if (!mdbFakeMethods.empty())
+        if (!mdbFakeMethods.isEmpty())
             for (const QString &fakeMethod : mdbFakeMethods)
                 if (predicate(fakeMethod)) {
                     *it = ClassNameSignaturePair(className, fakeMethod);
@@ -177,7 +177,7 @@ namespace {
 
     ReverseClassesMemberIterator::ReverseClassesMemberIterator(qdesigner_internal::ClassesMemberFunctions *result) :
        m_result(result),
-       m_memberList(0)
+       m_memberList(nullptr)
     {
     }
 
@@ -232,7 +232,7 @@ namespace qdesigner_internal {
     ClassesMemberFunctions reverseClassesMemberFunctions(const QString &obj_name, MemberType member_type,
                                                          const QString &peer, QDesignerFormWindowInterface *form)
     {
-        QObject *object = 0;
+        QObject *object = nullptr;
         if (obj_name == form->mainContainer()->objectName()) {
             object = form->mainContainer();
         } else {
@@ -266,7 +266,7 @@ namespace qdesigner_internal {
     {
         QMap<QString, QString> rc;
         memberList(core, object, type, true, EqualsPredicate(signature), SignatureIterator(&rc));
-        return !rc.empty();
+        return !rc.isEmpty();
     }
 
     // ### deprecated

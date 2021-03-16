@@ -45,6 +45,7 @@
 #include <QtCore/qobject.h>
 #include <QtCore/qpointer.h>
 #include <QtCore/qlist.h>
+#include <QtCore/qvector.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -69,7 +70,7 @@ public:
         ModeUnmanagedMultiSelection
     };
 
-    explicit PromotionTaskMenu(QWidget *widget,Mode mode = ModeManagedMultiSelection, QObject *parent = 0);
+    explicit PromotionTaskMenu(QWidget *widget,Mode mode = ModeManagedMultiSelection, QObject *parent = nullptr);
 
     Mode mode() const;
     void setMode(Mode m);
@@ -82,7 +83,7 @@ public:
     // Defaults to "Demote to %1".arg(class).
     void setDemoteLabel(const QString &demoteLabel);
 
-    typedef QList<QAction*> ActionList;
+    using ActionList = QList<QAction *>;
 
     enum AddFlags { LeadingSeparator = 1, TrailingSeparator = 2, SuppressGlobalEdit = 4};
 
@@ -111,7 +112,7 @@ private:
     PromotionState createPromotionActions(QDesignerFormWindowInterface *formWindow);
     QDesignerFormWindowInterface *formWindow() const;
 
-    typedef QList<QPointer<QWidget> > PromotionSelectionList;
+    using PromotionSelectionList = QVector<QPointer<QWidget> >;
     PromotionSelectionList promotionSelectionList(QDesignerFormWindowInterface *formWindow) const;
 
     Mode m_mode;

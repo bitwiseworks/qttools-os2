@@ -48,7 +48,7 @@ namespace {
     // Return a set of on-promotable classes
     const QSet<QString> &nonPromotableClasses() {
         static QSet<QString> rc;
-        if (rc.empty()) {
+        if (rc.isEmpty()) {
             rc.insert(QStringLiteral("Line"));
             rc.insert(QStringLiteral("QAction"));
             rc.insert(QStringLiteral("Spacer"));
@@ -79,7 +79,7 @@ namespace {
 
         const int index =  promotedWidgetDataBaseIndex(widgetDataBase, className, errorMessage);
         if (index == -1)
-            return 0;
+            return nullptr;
         return widgetDataBase->item(index);
     }
 
@@ -166,7 +166,7 @@ namespace qdesigner_internal {
 
     QList<QDesignerWidgetDataBaseItemInterface *> QDesignerPromotion::promotionBaseClasses() const
     {
-        typedef QMap<QString, QDesignerWidgetDataBaseItemInterface *> SortedDatabaseItemMap;
+        using SortedDatabaseItemMap = QMap<QString, QDesignerWidgetDataBaseItemInterface *>;
         SortedDatabaseItemMap sortedDatabaseItemMap;
 
         QDesignerWidgetDataBaseInterface *widgetDataBase = m_core->widgetDataBase();
@@ -202,9 +202,9 @@ namespace qdesigner_internal {
 
     QDesignerPromotion::PromotedClasses QDesignerPromotion::promotedClasses()  const
     {
-        typedef QMap<QString, QDesignerWidgetDataBaseItemInterface *> ClassNameItemMap;
+        using ClassNameItemMap = QMap<QString, QDesignerWidgetDataBaseItemInterface *>;
         // A map containing base classes and their promoted classes.
-        typedef QMap<QString, ClassNameItemMap> BaseClassPromotedMap;
+        using BaseClassPromotedMap = QMap<QString, ClassNameItemMap>;
 
         BaseClassPromotedMap baseClassPromotedMap;
 
@@ -225,7 +225,7 @@ namespace qdesigner_internal {
         // convert map into list.
         PromotedClasses rc;
 
-        if (baseClassPromotedMap.empty())
+        if (baseClassPromotedMap.isEmpty())
             return rc;
 
         const BaseClassPromotedMap::const_iterator bcend = baseClassPromotedMap.constEnd();
@@ -262,7 +262,7 @@ namespace qdesigner_internal {
         // check the scratchpad of the widget box
         if (QDesignerWidgetBoxInterface *widgetBox = m_core->widgetBox()) {
             const QStringList scratchPadClasses = getScratchPadClasses(widgetBox);
-            if (!scratchPadClasses.empty()) {
+            if (!scratchPadClasses.isEmpty()) {
                 // Check whether these are actually promoted
                 QDesignerWidgetDataBaseInterface *widgetDataBase = m_core->widgetDataBase();
                 QStringList::const_iterator cend = scratchPadClasses.constEnd();

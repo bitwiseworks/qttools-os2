@@ -111,9 +111,11 @@ private:
     void retranslate()
     {
         m_searchLabel->setText(QHelpSearchQueryWidget::tr("Search for:"));
+        m_searchButton->setText(QHelpSearchQueryWidget::tr("Search"));
+#if QT_CONFIG(tooltip)
         m_prevQueryButton->setToolTip(QHelpSearchQueryWidget::tr("Previous search"));
         m_nextQueryButton->setToolTip(QHelpSearchQueryWidget::tr("Next search"));
-        m_searchButton->setText(QHelpSearchQueryWidget::tr("Search"));
+#endif
     }
 
     void saveQuery(const QString &query)
@@ -300,7 +302,7 @@ void QHelpSearchQueryWidget::collapseExtendedSearch()
 QList<QHelpSearchQuery> QHelpSearchQueryWidget::query() const
 {
     return QList<QHelpSearchQuery>() << QHelpSearchQuery(QHelpSearchQuery::DEFAULT,
-           searchInput().split(QChar::Space, QString::SkipEmptyParts));
+           searchInput().split(QChar::Space, Qt::SkipEmptyParts));
 }
 
 /*!

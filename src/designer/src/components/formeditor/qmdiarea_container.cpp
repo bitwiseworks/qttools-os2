@@ -55,7 +55,7 @@ int QMdiAreaContainer::count() const
 QWidget *QMdiAreaContainer::widget(int index) const
 {
     if (index < 0)
-        return 0;
+        return nullptr;
     return m_mdiArea->subWindowList(QMdiArea::CreationOrder).at(index)->widget();
 }
 
@@ -117,7 +117,7 @@ void QMdiAreaContainer::insertWidget(int, QWidget *widget)
 
 void QMdiAreaContainer::remove(int index)
 {
-    QList<QMdiSubWindow *> subWins = m_mdiArea->subWindowList(QMdiArea::CreationOrder);
+    auto subWins = m_mdiArea->subWindowList(QMdiArea::CreationOrder);
     if (index >= 0 && index < subWins.size()) {
         QMdiSubWindow *f = subWins.at(index);
         m_mdiArea->removeSubWindow(f->widget());
@@ -142,9 +142,9 @@ QMdiAreaPropertySheet::QMdiAreaPropertySheet(QWidget *mdiArea, QObject *parent) 
 
 QMdiAreaPropertySheet::MdiAreaProperty QMdiAreaPropertySheet::mdiAreaProperty(const QString &name)
 {
-    typedef QHash<QString, MdiAreaProperty> MdiAreaPropertyHash;
+    using MdiAreaPropertyHash = QHash<QString, MdiAreaProperty>;
     static MdiAreaPropertyHash mdiAreaPropertyHash;
-    if (mdiAreaPropertyHash.empty()) {
+    if (mdiAreaPropertyHash.isEmpty()) {
         mdiAreaPropertyHash.insert(QLatin1String(subWindowNameC), MdiAreaSubWindowName);
         mdiAreaPropertyHash.insert(QLatin1String(subWindowTitleC), MdiAreaSubWindowTitle);
     }
@@ -214,7 +214,7 @@ bool QMdiAreaPropertySheet::isEnabled(int index) const
     switch (mdiAreaProperty(propertyName(index))) {
     case MdiAreaSubWindowName:
     case MdiAreaSubWindowTitle:
-        return currentWindow() != 0;
+        return currentWindow() != nullptr;
     case MdiAreaNone:
         break;
     }
@@ -226,7 +226,7 @@ bool QMdiAreaPropertySheet::isChanged(int index) const
     bool rc = false;
     switch (mdiAreaProperty(propertyName(index))) {
     case MdiAreaSubWindowName:
-        rc = currentWindow() != 0;
+        rc = currentWindow() != nullptr;
         break;
     case MdiAreaSubWindowTitle:
         if (QDesignerPropertySheetExtension *cws = currentWindowSheet()) {
@@ -246,17 +246,17 @@ QWidget *QMdiAreaPropertySheet::currentWindow() const
     if (const QDesignerContainerExtension *c = qt_extension<QDesignerContainerExtension*>(core()->extensionManager(), object())) {
         const int ci = c->currentIndex();
         if (ci < 0)
-            return 0;
+            return nullptr;
         return c->widget(ci);
     }
-    return 0;
+    return nullptr;
 }
 
 QDesignerPropertySheetExtension *QMdiAreaPropertySheet::currentWindowSheet() const
 {
     QWidget *cw = currentWindow();
-    if (cw == 0)
-        return 0;
+    if (cw == nullptr)
+        return nullptr;
     return qt_extension<QDesignerPropertySheetExtension*>(core()->extensionManager(), cw);
 }
 

@@ -44,9 +44,12 @@
 #include <QtWidgets/qlayout.h>
 #include <QtWidgets/qdockwidget.h>
 #include <QtWidgets/qdialog.h>
+#include <QtWidgets/qgroupbox.h>
 #include <QtWidgets/qlabel.h>
 #include <QtWidgets/qgroupbox.h>
 #include <QtWidgets/qstyle.h>
+#include <QtWidgets/qabstractbutton.h>
+#include <QtWidgets/qaction.h>
 #include <QtWidgets/qapplication.h>
 #include <QtWidgets/qtoolbar.h>
 #include <QtWidgets/qmainwindow.h>
@@ -64,7 +67,7 @@ static const QDesignerMetaObjectInterface *propertyIntroducedBy(const QDesignerM
     if (meta->superClass())
         return propertyIntroducedBy(meta->superClass(), index);
 
-    return 0;
+    return nullptr;
 }
 
 // Layout fake properties (prefixed by 'layout' to distinguish them from other 'margins'
@@ -108,7 +111,7 @@ static QDesignerFormEditorInterface *formEditorForObject(QObject *o) {
         o = o->parent();
     } while(o);
     Q_ASSERT(o);
-    return 0;
+    return nullptr;
 }
 
 static bool hasLayoutAttributes(QDesignerFormEditorInterface *core, QObject *object)
@@ -127,8 +130,8 @@ static bool hasLayoutAttributes(QDesignerFormEditorInterface *core, QObject *obj
 // Cache DesignerMetaEnum by scope/name of a  QMetaEnum
 static const qdesigner_internal::DesignerMetaEnum &designerMetaEnumFor(const QDesignerMetaEnumInterface *me)
 {
-    typedef QPair<QString, QString> ScopeNameKey;
-    typedef QMap<ScopeNameKey, qdesigner_internal::DesignerMetaEnum> DesignerMetaEnumCache;
+    using ScopeNameKey = QPair<QString, QString>;
+    using DesignerMetaEnumCache = QMap<ScopeNameKey, qdesigner_internal::DesignerMetaEnum>;
     static DesignerMetaEnumCache cache;
 
     const QString name = me->name();
@@ -149,8 +152,8 @@ static const qdesigner_internal::DesignerMetaEnum &designerMetaEnumFor(const QDe
 // Cache DesignerMetaFlags by scope/name of a  QMetaEnum
 static const qdesigner_internal::DesignerMetaFlags &designerMetaFlagsFor(const QDesignerMetaEnumInterface *me)
 {
-    typedef QPair<QString, QString> ScopeNameKey;
-    typedef QMap<ScopeNameKey, qdesigner_internal::DesignerMetaFlags> DesignerMetaFlagsCache;
+    using ScopeNameKey = QPair<QString, QString>;
+    using DesignerMetaFlagsCache = QMap<ScopeNameKey, qdesigner_internal::DesignerMetaFlags>;
     static DesignerMetaFlagsCache cache;
 
     const QString name = me->name();
@@ -171,8 +174,9 @@ static const qdesigner_internal::DesignerMetaFlags &designerMetaFlagsFor(const Q
 // ------------ QDesignerMemberSheetPrivate
 class QDesignerPropertySheetPrivate {
 public:
-    typedef QDesignerPropertySheet::PropertyType PropertyType;
-    typedef QDesignerPropertySheet::ObjectType ObjectType;
+    using PropertyType = QDesignerPropertySheet::PropertyType;
+    using ObjectType = QDesignerPropertySheet::ObjectType;
+    using ObjectFlags = QDesignerPropertySheet::ObjectFlags;
 
     explicit QDesignerPropertySheetPrivate(QDesignerPropertySheet *sheetPublic, QObject *object, QObject *sheetParent);
 
@@ -181,7 +185,7 @@ public:
 
     PropertyType propertyType(int index) const;
     QString transformLayoutPropertyName(int index) const;
-    QLayout* layout(QDesignerPropertySheetExtension **layoutPropertySheet = 0) const;
+    QLayout* layout(QDesignerPropertySheetExtension **layoutPropertySheet = nullptr) const;
     static ObjectType objectType(const QObject *o);
 
     bool isReloadableProperty(int index) const;
@@ -209,16 +213,16 @@ public:
     enum PropertyKind { NormalProperty, FakeProperty, DynamicProperty, DefaultDynamicProperty };
     class Info {
     public:
-        Info();
+        Info() = default;
 
         QString group;
         QVariant defaultValue;
-        bool changed;
-        bool visible;
-        bool attribute;
-        bool reset;
-        PropertyType propertyType;
-        PropertyKind kind;
+        bool changed = false;
+        bool visible = true;
+        bool attribute = false;
+        bool reset = true;
+        PropertyType propertyType = QDesignerPropertySheet::PropertyNone;
+        PropertyKind kind = NormalProperty;
     };
 
     Info &ensureInfo(int index);
@@ -227,8 +231,9 @@ public:
     QDesignerFormEditorInterface *m_core;
     const QDesignerMetaObjectInterface *m_meta;
     const ObjectType m_objectType;
+    const ObjectFlags m_objectFlags;
 
-    typedef QHash<int, Info> InfoHash;
+    using InfoHash = QHash<int, Info>;
     InfoHash m_info;
     QHash<int, QVariant> m_fakeProperties;
     QHash<int, QVariant> m_addProperties;
@@ -383,28 +388,19 @@ void QDesignerPropertySheetPrivate::setKeySequenceProperty(int index, const qdes
     m_keySequenceProperties[index] = value;
 }
 
-QDesignerPropertySheetPrivate::Info::Info() :
-    changed(false),
-    visible(true),
-    attribute(false),
-    reset(true),
-    propertyType(QDesignerPropertySheet::PropertyNone),
-    kind(NormalProperty)
-{
-}
-
 QDesignerPropertySheetPrivate::QDesignerPropertySheetPrivate(QDesignerPropertySheet *sheetPublic, QObject *object, QObject *sheetParent) :
     q(sheetPublic),
     m_core(formEditorForObject(sheetParent)),
     m_meta(m_core->introspection()->metaObject(object)),
     m_objectType(QDesignerPropertySheet::objectTypeFromObject(object)),
+    m_objectFlags(QDesignerPropertySheet::objectFlagsFromObject(object)),
     m_canHaveLayoutAttributes(hasLayoutAttributes(m_core, object)),
     m_object(object),
-    m_lastLayout(0),
-    m_lastLayoutPropertySheet(0),
+    m_lastLayout(nullptr),
+    m_lastLayoutPropertySheet(nullptr),
     m_LastLayoutByDesigner(false),
-    m_pixmapCache(0),
-    m_iconCache(0)
+    m_pixmapCache(nullptr),
+    m_iconCache(nullptr)
 {
 }
 
@@ -428,23 +424,23 @@ QLayout* QDesignerPropertySheetPrivate::layout(QDesignerPropertySheetExtension *
     // only if it is managed by designer and not one created on a custom widget.
     // (attempt to cache the value as this requires some hoops).
     if (layoutPropertySheet)
-        *layoutPropertySheet = 0;
+        *layoutPropertySheet = nullptr;
 
     if (!m_object->isWidgetType() || !m_canHaveLayoutAttributes)
-        return 0;
+        return nullptr;
 
     QWidget *widget = qobject_cast<QWidget*>(m_object);
     QLayout *widgetLayout = qdesigner_internal::LayoutInfo::internalLayout(widget);
     if (!widgetLayout) {
-        m_lastLayout = 0;
-        m_lastLayoutPropertySheet = 0;
-        return 0;
+        m_lastLayout = nullptr;
+        m_lastLayoutPropertySheet = nullptr;
+        return nullptr;
     }
     // Smart logic to avoid retrieving the meta DB from the widget every time.
     if (widgetLayout != m_lastLayout) {
         m_lastLayout = widgetLayout;
         m_LastLayoutByDesigner = false;
-        m_lastLayoutPropertySheet = 0;
+        m_lastLayoutPropertySheet = nullptr;
         // Is this a layout managed by designer or some layout on a custom widget?
         if (qdesigner_internal::LayoutInfo::managedLayout(m_core ,widgetLayout)) {
             m_LastLayoutByDesigner = true;
@@ -452,7 +448,7 @@ QLayout* QDesignerPropertySheetPrivate::layout(QDesignerPropertySheetExtension *
         }
     }
     if (!m_LastLayoutByDesigner)
-        return 0;
+        return nullptr;
 
     if (layoutPropertySheet)
         *layoutPropertySheet = m_lastLayoutPropertySheet;
@@ -478,9 +474,9 @@ QDesignerPropertySheet::PropertyType QDesignerPropertySheetPrivate::propertyType
 
 QString QDesignerPropertySheetPrivate::transformLayoutPropertyName(int index) const
 {
-    typedef QMap<QDesignerPropertySheet::PropertyType, QString> TypeNameMap;
+    using TypeNameMap = QMap<QDesignerPropertySheet::PropertyType, QString>;
     static TypeNameMap typeNameMap;
-    if (typeNameMap.empty()) {
+    if (typeNameMap.isEmpty()) {
         typeNameMap.insert(QDesignerPropertySheet::PropertyLayoutObjectName, QStringLiteral("objectName"));
         typeNameMap.insert(QDesignerPropertySheet::PropertyLayoutLeftMargin, QStringLiteral("leftMargin"));
         typeNameMap.insert(QDesignerPropertySheet::PropertyLayoutTopMargin, QStringLiteral("topMargin"));
@@ -525,11 +521,22 @@ QDesignerPropertySheet::ObjectType QDesignerPropertySheet::objectTypeFromObject(
     return ObjectNone;
 }
 
+QDesignerPropertySheet::ObjectFlags QDesignerPropertySheet::objectFlagsFromObject(const QObject *o)
+{
+    ObjectFlags result;
+    if ((o->isWidgetType() && (qobject_cast<const QAbstractButton *>(o)
+                               || qobject_cast<const QGroupBox *>(o)))
+        || qobject_cast<const QAction *>(o)) {
+        result |= CheckableProperty;
+    }
+    return result;
+}
+
 QDesignerPropertySheet::PropertyType QDesignerPropertySheet::propertyTypeFromName(const QString &name)
 {
     typedef QHash<QString, PropertyType> PropertyTypeHash;
     static PropertyTypeHash propertyTypeHash;
-    if (propertyTypeHash.empty()) {
+    if (propertyTypeHash.isEmpty()) {
         propertyTypeHash.insert(QLatin1String(layoutObjectNameC),         PropertyLayoutObjectName);
         propertyTypeHash.insert(QLatin1String(layoutLeftMarginC),         PropertyLayoutLeftMargin);
         propertyTypeHash.insert(QLatin1String(layoutTopMarginC),          PropertyLayoutTopMargin);
@@ -550,6 +557,7 @@ QDesignerPropertySheet::PropertyType QDesignerPropertySheet::propertyTypeFromNam
         propertyTypeHash.insert(QLatin1String(layoutGridColumnMinimumWidthC),    PropertyLayoutGridColumnMinimumWidth);
         propertyTypeHash.insert(QStringLiteral("buddy"),                   PropertyBuddy);
         propertyTypeHash.insert(QStringLiteral("geometry"),                PropertyGeometry);
+        propertyTypeHash.insert(QStringLiteral("checked"),                 PropertyChecked);
         propertyTypeHash.insert(QStringLiteral("checkable"),               PropertyCheckable);
         propertyTypeHash.insert(QStringLiteral("accessibleName"),          PropertyAccessibility);
         propertyTypeHash.insert(QStringLiteral("accessibleDescription"),   PropertyAccessibility);
@@ -570,13 +578,13 @@ QDesignerPropertySheet::QDesignerPropertySheet(QObject *object, QObject *parent)
     QObject(parent),
     d(new QDesignerPropertySheetPrivate(this, object, parent))
 {
-    typedef QDesignerPropertySheetPrivate::Info Info;
+    using Info = QDesignerPropertySheetPrivate::Info;
     const QDesignerMetaObjectInterface *baseMeta = d->m_meta;
 
     while (baseMeta &&baseMeta->className().startsWith(QStringLiteral("QDesigner"))) {
         baseMeta = baseMeta->superClass();
     }
-    Q_ASSERT(baseMeta != 0);
+    Q_ASSERT(baseMeta != nullptr);
 
     QDesignerFormWindowInterface *formWindow = QDesignerFormWindowInterface::findFormWindow(d->m_object);
     d->m_fwb = qobject_cast<qdesigner_internal::FormWindowBase *>(formWindow);
@@ -684,9 +692,9 @@ QDesignerPropertySheet::QDesignerPropertySheet(QObject *object, QObject *parent)
         createFakeProperty(QStringLiteral("floating"));
     }
 
-    typedef QList<QByteArray> ByteArrayList;
+    using ByteArrayList = QList<QByteArray>;
     const ByteArrayList names = object->dynamicPropertyNames();
-    if (!names.empty()) {
+    if (!names.isEmpty()) {
         const ByteArrayList::const_iterator cend =  names.constEnd();
         for (ByteArrayList::const_iterator it = names.constBegin(); it != cend; ++it) {
             const char* cName = it->constData();
@@ -732,7 +740,7 @@ bool QDesignerPropertySheet::canAddDynamicProperty(const QString &propName) cons
 
 int QDesignerPropertySheet::addDynamicProperty(const QString &propName, const QVariant &value)
 {
-    typedef QDesignerPropertySheetPrivate::Info Info;
+    using Info = QDesignerPropertySheetPrivate::Info;
     if (!value.isValid())
         return -1; // property has invalid type
     if (!canAddDynamicProperty(propName))
@@ -893,7 +901,7 @@ void QDesignerPropertySheet::setIconCache(qdesigner_internal::DesignerIconCache 
 
 int QDesignerPropertySheet::createFakeProperty(const QString &propertyName, const QVariant &value)
 {
-    typedef QDesignerPropertySheetPrivate::Info Info;
+    using Info = QDesignerPropertySheetPrivate::Info;
     // fake properties
     const int index = d->m_meta->indexOfProperty(propertyName);
     if (index != -1) {
@@ -1269,7 +1277,8 @@ bool QDesignerPropertySheet::reset(int index)
     if (d->isResourceProperty(index)) {
         setProperty(index, d->emptyResourceProperty(index));
         return true;
-    } else if (isDynamic(index)) {
+    }
+    if (isDynamic(index)) {
         const QString propName = propertyName(index);
         const QVariant oldValue = d->m_addProperties.value(index);
         const QVariant defaultValue = d->m_info.value(index).defaultValue;
@@ -1576,8 +1585,16 @@ bool QDesignerPropertySheet::isEnabled(int index) const
     // as this might be done via TaskMenu/Cursor::setProperty. Note that those
     // properties are not visible.
     const QDesignerMetaPropertyInterface *p = d->m_meta->property(index);
-    return (p->accessFlags() & QDesignerMetaPropertyInterface::WriteAccess) &&
-           designableState(p, d->m_object) != PropertyOfObjectNotDesignable;
+    if (!p->accessFlags().testFlag(QDesignerMetaPropertyInterface::WriteAccess))
+        return false;
+
+    if (designableState(p, d->m_object) == PropertyOfObjectNotDesignable)
+        return false;
+
+    const PropertyType type = propertyType(index);
+    if (type == PropertyChecked && d->m_objectFlags.testFlag(CheckableProperty))
+        return d->m_object->property("checkable").toBool();
+    return true;
 }
 
 bool QDesignerPropertySheet::isAttribute(int index) const
@@ -1622,7 +1639,7 @@ struct QDesignerAbstractPropertySheetFactory::PropertySheetFactoryPrivate {
     const QString m_propertySheetId;
     const QString m_dynamicPropertySheetId;
 
-    typedef QMap<QObject*, QObject*> ExtensionMap;
+    using ExtensionMap = QMap<QObject*, QObject*>;
     ExtensionMap m_extensions;
 };
 
@@ -1649,10 +1666,10 @@ QDesignerAbstractPropertySheetFactory::~QDesignerAbstractPropertySheetFactory()
 QObject *QDesignerAbstractPropertySheetFactory::extension(QObject *object, const QString &iid) const
 {
     if (!object)
-        return 0;
+        return nullptr;
 
     if (iid != m_impl->m_propertySheetId && iid != m_impl->m_dynamicPropertySheetId)
-        return 0;
+        return nullptr;
 
     QObject *ext = m_impl->m_extensions.value(object, 0);
     if (!ext && (ext = createPropertySheet(object, const_cast<QDesignerAbstractPropertySheetFactory*>(this)))) {
@@ -1666,16 +1683,16 @@ QObject *QDesignerAbstractPropertySheetFactory::extension(QObject *object, const
 
 void QDesignerAbstractPropertySheetFactory::objectDestroyed(QObject *object)
 {
-    QMutableMapIterator<QObject*, QObject*> it(m_impl->m_extensions);
-    while (it.hasNext()) {
-        it.next();
+    for (auto it = m_impl->m_extensions.begin(), end = m_impl->m_extensions.end(); it != end; /*erasing*/) {
         if (it.key() == object || it.value() == object) {
             if (it.key() == object) {
                 QObject *ext = it.value();
                 disconnect(ext, &QObject::destroyed, this, &QDesignerAbstractPropertySheetFactory::objectDestroyed);
                 delete ext;
             }
-            it.remove();
+            it = m_impl->m_extensions.erase(it);
+        } else {
+            ++it;
         }
     }
 }

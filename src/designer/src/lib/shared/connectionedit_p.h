@@ -45,6 +45,7 @@
 
 #include <QtCore/qhash.h>
 #include <QtCore/qlist.h>
+#include <QtCore/qvector.h>
 #include <QtCore/qpointer.h>
 
 #include <QtWidgets/qwidget.h>
@@ -67,15 +68,15 @@ class ConnectionEdit;
 class QDESIGNER_SHARED_EXPORT CETypes
 {
 public:
-    typedef QList<Connection*> ConnectionList;
-    typedef QHash<Connection*, Connection*> ConnectionSet;
-    typedef QHash<QWidget*, QWidget*> WidgetSet;
+    using ConnectionList = QVector<Connection *>;
+    using ConnectionSet = QHash<Connection*, Connection*> ;
+    using WidgetSet = QHash<QWidget*, QWidget*>;
 
     class EndPoint {
     public:
         enum Type { Source, Target };
-        explicit EndPoint(Connection *_con = 0, Type _type = Source) : con(_con), type(_type) {}
-        bool isNull() const { return con == 0; }
+        explicit EndPoint(Connection *_con = nullptr, Type _type = Source) : con(_con), type(_type) {}
+        bool isNull() const { return con == nullptr; }
         bool operator == (const EndPoint &other) const { return con == other.con && type == other.type; }
         bool operator != (const EndPoint &other) const { return !operator == (other); }
         Connection *con;
@@ -132,7 +133,7 @@ public:
 private:
     QPoint m_source_pos, m_target_pos;
     QObject *m_source, *m_target;
-    QList<QPoint> m_knee_list;
+    QVector<QPoint> m_knee_list;
     QPolygonF m_arrow_head;
     ConnectionEdit *m_edit;
     QString m_source_label, m_target_label;

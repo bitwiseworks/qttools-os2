@@ -53,6 +53,9 @@ bool alwaysOwerwriteEnabled = false;
 bool runCodesign = false;
 QStringList librarySearchPath;
 QString codesignIdentiy;
+QString extraEntitlements;
+bool hardenedRuntime = false;
+bool secureTimestamp = false;
 bool appstoreCompliant = false;
 int logLevel = 1;
 bool deployFramework = false;
@@ -180,10 +183,10 @@ OtoolInfo findDependencyInfo(const QString &binaryPath)
 
     static const QRegularExpression regexp(QStringLiteral(
         "^\\t(.+) \\(compatibility version (\\d+\\.\\d+\\.\\d+), "
-        "current version (\\d+\\.\\d+\\.\\d+)\\)$"));
+        "current version (\\d+\\.\\d+\\.\\d+)(, weak)?\\)$"));
 
     QString output = otool.readAllStandardOutput();
-    QStringList outputLines = output.split("\n", QString::SkipEmptyParts);
+    QStringList outputLines = output.split("\n", Qt::SkipEmptyParts);
     if (outputLines.size() < 2) {
         LogError() << "Could not parse otool output:" << output;
         return info;
@@ -472,6 +475,23 @@ QStringList findAppBundleFiles(const QString &appBundlePath, bool absolutePath =
     return result;
 }
 
+QString findEntitlementsFile(const QString& path)
+{
+    QDirIterator iter(path, QStringList() << QString::fromLatin1("*.entitlements"),
+            QDir::Files, QDirIterator::Subdirectories);
+
+    while (iter.hasNext()) {
+        iter.next();
+        if (iter.fileInfo().isSymLink())
+            continue;
+
+        //return the first entitlements file - only one is used for signing anyway
+        return iter.fileInfo().absoluteFilePath();
+    }
+
+    return QString();
+}
+
 QList<FrameworkInfo> getQtFrameworks(const QList<DylibInfo> &dependencies, const QString &appBundlePath, const QSet<QString> &rpaths, bool useDebugLibs)
 {
     QList<FrameworkInfo> libraries;
@@ -530,12 +550,11 @@ QSet<QString> getBinaryRPaths(const QString &path, bool resolve = true, QString 
 
     QString output = otool.readAllStandardOutput();
     QStringList outputLines = output.split("\n");
-    QStringListIterator i(outputLines);
 
-    while (i.hasNext()) {
-        if (i.next().contains("cmd LC_RPATH") && i.hasNext() &&
-        i.next().contains("cmdsize") && i.hasNext()) {
-            const QString &rpathCmd = i.next();
+    for (auto i = outputLines.cbegin(), end = outputLines.cend(); i != end; ++i) {
+        if (i->contains("cmd LC_RPATH") && ++i != end &&
+            i->contains("cmdsize") && ++i != end) {
+            const QString &rpathCmd = *i;
             int pathStart = rpathCmd.indexOf("path ");
             int pathEnd = rpathCmd.indexOf(" (");
             if (pathStart >= 0 && pathEnd >= 0 && pathStart < pathEnd) {
@@ -1294,7 +1313,7 @@ bool deployQmlImports(const QString &appBundlePath, DeploymentInfo deploymentInf
     // deployQmlImports can consider the module deployed if it has already
     // deployed one of its sub-module)
     QVariantList array = doc.array().toVariantList();
-    qSort(array.begin(), array.end(), importLessThan);
+    std::sort(array.begin(), array.end(), importLessThan);
 
     // deploy each import
     foreach (const QVariant &importValue, array) {
@@ -1372,11 +1391,26 @@ void codesignFile(const QString &identity, const QString &filePath)
     if (!runCodesign)
         return;
 
-    LogNormal() << "codesign" << filePath;
+    QString codeSignLogMessage = "codesign";
+    if (hardenedRuntime)
+        codeSignLogMessage += ", enable hardened runtime";
+    if (secureTimestamp)
+        codeSignLogMessage += ", include secure timestamp";
+    LogNormal() << codeSignLogMessage << filePath;
+
+    QStringList codeSignOptions = { "--preserve-metadata=identifier,entitlements", "--force", "-s",
+                                    identity, filePath };
+    if (hardenedRuntime)
+        codeSignOptions << "-o" << "runtime";
+
+    if (secureTimestamp)
+        codeSignOptions << "--timestamp";
+
+    if (!extraEntitlements.isEmpty())
+        codeSignOptions << "--entitlements" << extraEntitlements;
 
     QProcess codesign;
-    codesign.start("codesign", QStringList() << "--preserve-metadata=identifier,entitlements"
-                                             << "--force" << "-s" << identity << filePath);
+    codesign.start("codesign", codeSignOptions);
     codesign.waitForFinished(-1);
 
     QByteArray err = codesign.readAllStandardError();
@@ -1495,6 +1529,9 @@ QSet<QString> codesignBundle(const QString &identity,
                 continue;
             }
         }
+
+        // Look for an entitlements file in the bundle to include when signing
+        extraEntitlements = findEntitlementsFile(appBundleAbsolutePath + "/Contents/Resources/");
 
         // All dependencies are signed, now sign this binary.
         codesignFile(identity, binary);

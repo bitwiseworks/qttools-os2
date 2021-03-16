@@ -216,7 +216,7 @@ void QSimpleResource::addCustomWidgetsToWidgetDatabase(const QDesignerFormEditor
 void QSimpleResource::handleDomCustomWidgets(const QDesignerFormEditorInterface *core,
                                              const DomCustomWidgets *dom_custom_widgets)
 {
-    if (dom_custom_widgets == 0)
+    if (dom_custom_widgets == nullptr)
         return;
     auto custom_widget_list = dom_custom_widgets->elementCustomWidget();
     // Attempt to insert each item derived from its base class.
@@ -224,7 +224,7 @@ void QSimpleResource::handleDomCustomWidgets(const QDesignerFormEditorInterface 
     // (derived first, max depth: promoted custom plugin = 2)
     for (int iteration = 0;  iteration < 2;  iteration++) {
         addCustomWidgetsToWidgetDatabase(core, custom_widget_list);
-        if (custom_widget_list.empty())
+        if (custom_widget_list.isEmpty())
             return;
     }
     // Oops, there are classes left whose base class could not be found.
@@ -250,7 +250,7 @@ FormBuilderClipboard::FormBuilderClipboard(QWidget *w)
 
 bool FormBuilderClipboard::empty() const
 {
-    return m_widgets.empty() && m_actions.empty();
+    return m_widgets.isEmpty() && m_actions.isEmpty();
 }
 }
 

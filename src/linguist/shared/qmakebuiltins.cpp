@@ -779,7 +779,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateBuiltinExpand(
         const auto vars = values(map(args.at(0)));
         for (const ProString &var : vars) {
             // FIXME: this is inconsistent with the "there are no empty strings" dogma.
-            const auto splits = var.toQStringRef().split(sep, QString::KeepEmptyParts);
+            const auto splits = var.toQStringRef().split(sep, Qt::KeepEmptyParts);
             for (const auto &splt : splits)
                 ret << ProString(splt).setSource(var);
         }
@@ -889,8 +889,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateBuiltinExpand(
         ret += values(map(args.at(0)));
         break;
     case E_LIST: {
-        QString tmp;
-        tmp.sprintf(".QMAKE_INTERNAL_TMP_variableName_%d", m_listCount++);
+        QString tmp = QString::asprintf(".QMAKE_INTERNAL_TMP_variableName_%d", m_listCount++);
         ret = ProStringList(ProString(tmp));
         ProStringList lst;
         for (const ProString &arg : args)
@@ -1431,15 +1430,15 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateBuiltinConditional(
     }
     case T_EXPORT: {
         const ProKey &var = map(args.at(0));
-        for (ProValueMapStack::Iterator vmi = m_valuemapStack.end();
+        for (ProValueMapStack::iterator vmi = m_valuemapStack.end();
              --vmi != m_valuemapStack.begin(); ) {
             ProValueMap::Iterator it = (*vmi).find(var);
             if (it != (*vmi).end()) {
                 if (it->constBegin() == statics.fakeValue.constBegin()) {
                     // This is stupid, but qmake doesn't propagate deletions
-                    m_valuemapStack.first()[var] = ProStringList();
+                    m_valuemapStack.front()[var] = ProStringList();
                 } else {
-                    m_valuemapStack.first()[var] = *it;
+                    m_valuemapStack.front()[var] = *it;
                 }
                 (*vmi).erase(it);
                 while (--vmi != m_valuemapStack.begin())
@@ -1450,7 +1449,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateBuiltinConditional(
         return ReturnTrue;
     }
     case T_DISCARD_FROM: {
-        if (m_valuemapStack.count() != 1) {
+        if (m_valuemapStack.size() != 1) {
             evalError(fL1S("discard_from() cannot be called from functions."));
             return ReturnFalse;
         }
@@ -1460,7 +1459,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateBuiltinConditional(
         int pro = m_vfs->idForFileName(fn, flags | QMakeVfs::VfsAccessedOnly);
         if (!pro)
             return ReturnFalse;
-        ProValueMap &vmap = m_valuemapStack.first();
+        ProValueMap &vmap = m_valuemapStack.front();
         for (auto vit = vmap.begin(); vit != vmap.end(); ) {
             if (!vit->isEmpty()) {
                 auto isFrom = [pro](const ProString &s) {
@@ -1488,7 +1487,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateBuiltinConditional(
             else
                 ++fit;
         }
-        ProStringList &iif = m_valuemapStack.first()[ProKey("QMAKE_INTERNAL_INCLUDED_FILES")];
+        ProStringList &iif = m_valuemapStack.front()[ProKey("QMAKE_INTERNAL_INCLUDED_FILES")];
         int idx = iif.indexOf(ProString(fn));
         if (idx >= 0)
             iif.removeAt(idx);
@@ -1550,7 +1549,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateBuiltinConditional(
         if (args.count() == 1)
             return returnBool(isActiveConfig(args.at(0).toQStringRef()));
         const auto &mutuals = args.at(1).toQStringRef().split(QLatin1Char('|'),
-                                                              QString::SkipEmptyParts);
+                                                              Qt::SkipEmptyParts);
         const ProStringList &configs = values(statics.strCONFIG);
 
         for (int i = configs.size() - 1; i >= 0; i--) {
@@ -1584,7 +1583,7 @@ QMakeEvaluator::VisitReturn QMakeEvaluator::evaluateBuiltinConditional(
             }
         } else {
             const auto mutuals = args.at(2).toQStringRef().split(QLatin1Char('|'),
-                                                                 QString::SkipEmptyParts);
+                                                                 Qt::SkipEmptyParts);
             for (int i = l.size() - 1; i >= 0; i--) {
                 const ProString &val = l[i];
                 for (int mut = 0; mut < mutuals.count(); mut++) {

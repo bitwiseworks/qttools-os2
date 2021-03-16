@@ -51,8 +51,7 @@ namespace qdesigner_internal {
         QT_TRANSLATE_NOOP("FontPropertyManager", "PreferAntialias")
     };
 
-    FontPropertyManager::FontPropertyManager() :
-        m_createdFontProperty(0)
+    FontPropertyManager::FontPropertyManager()
     {
         const int nameCount = sizeof(aliasingC)/sizeof(const char *);
         for (int  i = 0; i < nameCount; i++)
@@ -87,7 +86,7 @@ namespace qdesigner_internal {
     // Map the font family names to display names retrieved from the XML configuration
     static QStringList designerFamilyNames(QStringList families, const FontPropertyManager::NameMap &nm)
     {
-        if (nm.empty())
+        if (nm.isEmpty())
             return families;
 
         const auto ncend = nm.constEnd();
@@ -118,9 +117,9 @@ namespace qdesigner_internal {
         m_propertyToAntialiasing[property] = antialiasing;
         m_antialiasingToProperty[antialiasing] = property;
         // Fiddle family names
-        if (!m_familyMappings.empty()) {
+        if (!m_familyMappings.isEmpty()) {
             const PropertyToSubPropertiesMap::iterator it = m_propertyToFontSubProperties.find(m_createdFontProperty);
-            QtVariantProperty *familyProperty = vm->variantProperty(it.value().front());
+            QtVariantProperty *familyProperty = vm->variantProperty(it.value().constFirst());
             const QString enumNamesAttribute = QStringLiteral("enumNames");
             QStringList plainFamilyNames = familyProperty->attributeValue(enumNamesAttribute).toStringList();
             // Did someone load fonts or something?
@@ -129,7 +128,7 @@ namespace qdesigner_internal {
             familyProperty->setAttribute(enumNamesAttribute, m_designerFamilyNames);
         }
         // Next
-        m_createdFontProperty = 0;
+        m_createdFontProperty = nullptr;
     }
 
     bool FontPropertyManager::uninitializeProperty(QtProperty *property)

@@ -35,10 +35,22 @@
 #include <QtDesigner/qextensionmanager.h>
 #include <QtDesigner/abstractformwindowcursor.h>
 
+#include <qdesigner_propertysheet_p.h>
+
 #include <QtWidgets/qmainwindow.h>
 #include <QtWidgets/qlayout.h>
 
 QT_BEGIN_NAMESPACE
+
+bool QDockWidgetPropertySheet::isEnabled(int index) const
+{
+    const QString &name = propertyName(index);
+    if (name == QLatin1String("dockWidgetArea"))
+        return static_cast<const QDesignerDockWidget *>(object())->docked();
+    if (name == QLatin1String("docked"))
+        return static_cast<const QDesignerDockWidget *>(object())->inMainWindow();
+    return QDesignerPropertySheet::isEnabled(index);
+}
 
 QDesignerDockWidget::QDesignerDockWidget(QWidget *parent)
     : QDockWidget(parent)
@@ -61,7 +73,7 @@ void QDesignerDockWidget::setDocked(bool b)
         if (b && !docked()) {
             // Dock it
             // ### undo/redo stack
-            setParent(0);
+            setParent(nullptr);
             c->addWidget(this);
             formWindow()->selectWidget(this, formWindow()->cursor()->isWidgetSelected(this));
         } else if (!b && docked()) {
@@ -119,7 +131,7 @@ QMainWindow *QDesignerDockWidget::findMainWindow() const
 {
     if (QDesignerFormWindowInterface *fw = formWindow())
         return qobject_cast<QMainWindow*>(fw->mainContainer());
-    return 0;
+    return nullptr;
 }
 
 QT_END_NAMESPACE

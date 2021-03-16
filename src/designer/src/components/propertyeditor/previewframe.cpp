@@ -42,7 +42,7 @@ namespace qdesigner_internal {
 
     class PreviewMdiArea: public QMdiArea {
     public:
-        PreviewMdiArea(QWidget *parent = 0) : QMdiArea(parent) {}
+        PreviewMdiArea(QWidget *parent = nullptr) : QMdiArea(parent) {}
     protected:
         bool viewportEvent(QEvent *event) override;
     };
@@ -78,12 +78,12 @@ PreviewFrame::PreviewFrame(QWidget *parent) :
 
 void PreviewFrame::setPreviewPalette(const QPalette &pal)
 {
-    ensureMdiSubWindow()->widget()->setPalette(pal);
+    ensureMdiSubWindow()->setPalette(pal);
 }
 
 void PreviewFrame::setSubWindowActive(bool active)
 {
-    m_mdiArea->setActiveSubWindow (active ? ensureMdiSubWindow() : static_cast<QMdiSubWindow *>(0));
+    m_mdiArea->setActiveSubWindow (active ? ensureMdiSubWindow() : nullptr);
 }
 
 QMdiSubWindow *PreviewFrame::ensureMdiSubWindow()

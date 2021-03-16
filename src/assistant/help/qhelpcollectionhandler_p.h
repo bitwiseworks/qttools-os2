@@ -65,6 +65,7 @@ QT_BEGIN_NAMESPACE
 
 class QVersionNumber;
 class QHelpFilterData;
+struct QHelpLink;
 
 class QHelpCollectionHandler : public QObject
 {
@@ -153,12 +154,19 @@ public:
     QMap<QString, QUrl> linksForKeyword(const QString &keyword,
                                         const QStringList &filterAttributes) const;
 
+    // use documentsForIdentifier instead
+    QMap<QString, QUrl> linksForIdentifier(const QString &id,
+                                           const QString &filterName) const;
+
+    // use documentsForKeyword instead
+    QMap<QString, QUrl> linksForKeyword(const QString &keyword,
+                                        const QString &filterName) const;
     // *** Legacy block end ***
 
     QStringList filters() const;
 
     QStringList availableComponents() const;
-    QStringList availableVersions() const;
+    QList<QVersionNumber> availableVersions() const;
     QMap<QString, QString> namespaceToComponent() const;
     QMap<QString, QVersionNumber> namespaceToVersion() const;
     QHelpFilterData filterData(const QString &filterName) const;
@@ -196,10 +204,15 @@ public:
     int registerComponent(const QString &componentName, int namespaceId);
     bool registerVersion(const QString &version, int namespaceId);
 
-    QMap<QString, QUrl> linksForIdentifier(const QString &id,
-                                           const QString &filterName) const;
-    QMap<QString, QUrl> linksForKeyword(const QString &keyword,
-                                        const QString &filterName) const;
+    QList<QHelpLink> documentsForIdentifier(const QString &id,
+                                            const QString &filterName) const;
+    QList<QHelpLink> documentsForKeyword(const QString &keyword,
+                                         const QString &filterName) const;
+    QList<QHelpLink> documentsForIdentifier(const QString &id,
+                                            const QStringList &filterAttributes) const;
+    QList<QHelpLink> documentsForKeyword(const QString &keyword,
+                                         const QStringList &filterAttributes) const;
+
     QStringList namespacesForFilter(const QString &filterName) const;
 
     void setReadOnly(bool readOnly);
@@ -212,11 +225,18 @@ private:
     QMap<QString, QUrl> linksForField(const QString &fieldName,
                                       const QString &fieldValue,
                                       const QStringList &filterAttributes) const;
+    QList<QHelpLink> documentsForField(const QString &fieldName,
+                                       const QString &fieldValue,
+                                       const QStringList &filterAttributes) const;
 
     QString namespaceVersion(const QString &namespaceName) const;
     QMap<QString, QUrl> linksForField(const QString &fieldName,
                                       const QString &fieldValue,
                                       const QString &filterName) const;
+    QList<QHelpLink> documentsForField(const QString &fieldName,
+                                       const QString &fieldValue,
+                                       const QString &filterName) const;
+
     bool isDBOpened() const;
     bool createTables(QSqlQuery *query);
     void closeDB();

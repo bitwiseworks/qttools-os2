@@ -52,6 +52,7 @@
 #include <QtWidgets/qgroupbox.h>
 
 #include <QtCore/qset.h>
+#include <QtCore/qvector.h>
 
 #include <algorithm>
 
@@ -59,7 +60,7 @@ QT_BEGIN_NAMESPACE
 
 namespace qdesigner_internal {
 
-typedef QList<DeviceProfile> DeviceProfileList;
+using DeviceProfileList = QVector<DeviceProfile>;
 
 enum { profileComboIndexOffset = 1 };
 
@@ -81,7 +82,7 @@ static bool ask(QWidget *parent,
 
 // ------------ EmbeddedOptionsControlPrivate
 class EmbeddedOptionsControlPrivate {
-     Q_DISABLE_COPY(EmbeddedOptionsControlPrivate)
+     Q_DISABLE_COPY_MOVE(EmbeddedOptionsControlPrivate)
 public:
     EmbeddedOptionsControlPrivate(QDesignerFormEditorInterface *core);
     void init(EmbeddedOptionsControl *q);
@@ -109,9 +110,9 @@ private:
     QLabel *m_descriptionLabel;
 
     DeviceProfileList m_sortedProfiles;
-    EmbeddedOptionsControl *m_q;
-    bool m_dirty;
+    EmbeddedOptionsControl *m_q = nullptr;
     QSet<QString> m_usedProfiles;
+    bool m_dirty = false;
 };
 
 EmbeddedOptionsControlPrivate::EmbeddedOptionsControlPrivate(QDesignerFormEditorInterface *core) :
@@ -120,9 +121,7 @@ EmbeddedOptionsControlPrivate::EmbeddedOptionsControlPrivate(QDesignerFormEditor
     m_addButton(new QToolButton),
     m_editButton(new QToolButton),
     m_deleteButton(new QToolButton),
-    m_descriptionLabel(new QLabel),
-    m_q(0),
-    m_dirty(false)
+    m_descriptionLabel(new QLabel)
 {
     m_descriptionLabel->setMinimumHeight(80);
     // Determine used profiles to lock them
@@ -139,8 +138,6 @@ EmbeddedOptionsControlPrivate::EmbeddedOptionsControlPrivate(QDesignerFormEditor
 
 void EmbeddedOptionsControlPrivate::init(EmbeddedOptionsControl *q)
 {
-    typedef void (QComboBox::*QComboIntSignal)(int);
-
     m_q = q;
     QVBoxLayout *vLayout = new QVBoxLayout;
     QHBoxLayout *hLayout = new QHBoxLayout;
@@ -148,7 +145,7 @@ void EmbeddedOptionsControlPrivate::init(EmbeddedOptionsControl *q)
     m_profileCombo->setEditable(false);
     hLayout->addWidget(m_profileCombo);
     m_profileCombo->addItem(EmbeddedOptionsControl::tr("None"));
-    EmbeddedOptionsControl::connect(m_profileCombo, static_cast<QComboIntSignal>(&QComboBox::currentIndexChanged),
+    EmbeddedOptionsControl::connect(m_profileCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
                                     m_q, &EmbeddedOptionsControl::slotProfileIndexChanged);
 
     m_addButton->setIcon(createIconSet(QString::fromUtf8("plus.png")));
@@ -269,7 +266,7 @@ void EmbeddedOptionsControlPrivate::sortAndPopulateProfileCombo()
     // Clear items until only "None" is left
     for (int i = m_profileCombo->count() - 1; i > 0; i--)
         m_profileCombo->removeItem(i);
-    if (!m_sortedProfiles.empty()) {
+    if (!m_sortedProfiles.isEmpty()) {
         std::sort(m_sortedProfiles.begin(), m_sortedProfiles.end(), deviceProfileLessThan);
         m_profileCombo->addItems(existingProfileNames());
     }

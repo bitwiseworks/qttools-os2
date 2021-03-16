@@ -41,15 +41,15 @@
 QT_BEGIN_NAMESPACE
 
 namespace qdesigner_internal {
-typedef QDesignerPropertyEditor::StringPropertyParameters StringPropertyParameters;
+using StringPropertyParameters = QDesignerPropertyEditor::StringPropertyParameters;
 // A map of property name to type
-typedef QHash<QString, StringPropertyParameters> PropertyNameTypeMap;
+using PropertyNameTypeMap = QHash<QString, StringPropertyParameters>;
 
 // Compile a map of hard-coded string property types
 static const PropertyNameTypeMap &stringPropertyTypes()
 {
     static PropertyNameTypeMap propertyNameTypeMap;
-    if (propertyNameTypeMap.empty()) {
+    if (propertyNameTypeMap.isEmpty()) {
         const StringPropertyParameters richtext(ValidationRichText, true);
         // Accessibility. Both are texts the narrator reads
         propertyNameTypeMap.insert(QStringLiteral("accessibleDescription"), richtext);
@@ -82,8 +82,7 @@ static const PropertyNameTypeMap &stringPropertyTypes()
 }
 
 QDesignerPropertyEditor::QDesignerPropertyEditor(QWidget *parent, Qt::WindowFlags flags) :
-    QDesignerPropertyEditorInterface(parent, flags),
-    m_propertyChangedForwardingBlocked(false)
+    QDesignerPropertyEditorInterface(parent, flags)
 {
     // Make old signal work for  compatibility
     connect(this, &QDesignerPropertyEditorInterface::propertyChanged,

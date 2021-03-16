@@ -90,7 +90,7 @@ namespace {
         // A widget managed by the form window cursor
         ManagedWidgetSelection };
 
-    typedef QVector<QObject*> QObjectVector;
+    using QObjectVector = QVector<QObject *>;
 }
 
 static inline SelectionType selectionType(const QDesignerFormWindowInterface *fw, QObject *o)
@@ -117,15 +117,10 @@ namespace qdesigner_internal {
 // Delegate with object name validator for the object name column
 class ObjectInspectorDelegate : public QStyledItemDelegate {
 public:
-    explicit ObjectInspectorDelegate(QObject *parent = 0);
+    using QStyledItemDelegate::QStyledItemDelegate;
 
     QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 };
-
-ObjectInspectorDelegate::ObjectInspectorDelegate(QObject *parent) :
-    QStyledItemDelegate(parent)
-{
-}
 
 QWidget *ObjectInspectorDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem & option, const QModelIndex &index) const
 {
@@ -144,7 +139,7 @@ QWidget *ObjectInspectorDelegate::createEditor(QWidget *parent, const QStyleOpti
 
 class ObjectInspectorTreeView : public QTreeView {
 public:
-    ObjectInspectorTreeView(QWidget *parent = 0) :  QTreeView(parent) {}
+    using QTreeView::QTreeView;
 
 protected:
     void mouseMoveEvent (QMouseEvent * event) override;
@@ -187,7 +182,7 @@ void ObjectInspectorTreeView::keyPressEvent(QKeyEvent *event)
 // ------------ ObjectInspectorPrivate
 
 class ObjectInspector::ObjectInspectorPrivate {
-    Q_DISABLE_COPY(ObjectInspectorPrivate)
+    Q_DISABLE_COPY_MOVE(ObjectInspectorPrivate)
 public:
     ObjectInspectorPrivate(QDesignerFormEditorInterface *core);
     ~ObjectInspectorPrivate();
@@ -286,17 +281,17 @@ void ObjectInspector::ObjectInspectorPrivate::clearSelection()
 QWidget *ObjectInspector::ObjectInspectorPrivate::managedWidgetAt(const QPoint &global_mouse_pos)
 {
     if (!m_formWindow)
-        return 0;
+        return nullptr;
 
     const  QPoint pos = m_treeView->viewport()->mapFromGlobal(global_mouse_pos);
     QObject *o = objectAt(m_treeView->indexAt(pos));
 
     if (!o || !o->isWidgetType())
-        return 0;
+        return nullptr;
 
     QWidget *rc = qobject_cast<QWidget *>(o);
     if (!m_formWindow->isManaged(rc))
-        return 0;
+        return nullptr;
     return rc;
 }
 
@@ -312,7 +307,7 @@ void ObjectInspector::ObjectInspectorPrivate::showContainersCurrentPage(QWidget 
     QWidget *w = widget->parentWidget();
     bool macroStarted = false;
     // Find a multipage container (tab widgets, etc.) in the hierarchy and set the right page.
-    while (w != 0) {
+    while (w != nullptr) {
         if (fw->isManaged(w) && !qobject_cast<QMainWindow *>(w)) { // Rule out unmanaged internal scroll areas, for example, on QToolBoxes.
             if (QDesignerContainerExtension *c = qt_extension<QDesignerContainerExtension*>(m_core->extensionManager(), w)) {
                 const int count = c->count();
@@ -343,7 +338,7 @@ void ObjectInspector::ObjectInspectorPrivate::restoreDropHighlighting()
         if (m_formWindow) {
             m_formWindow->highlightWidget(m_formFakeDropTarget, QPoint(5, 5), FormWindow::Restore);
         }
-        m_formFakeDropTarget = 0;
+        m_formFakeDropTarget = nullptr;
     }
 }
 
@@ -360,7 +355,7 @@ void ObjectInspector::ObjectInspectorPrivate::handleDragEnterMoveEvent(const QWi
         return;
     }
 
-    QWidget *dropTarget = 0;
+    QWidget *dropTarget = nullptr;
     QPoint fakeDropTargetOffset = QPoint(0, 0);
     if (QWidget *managedWidget = managedWidgetAt(objectInspectorWidget->mapToGlobal(event->pos()))) {
         fakeDropTargetOffset = dropPointOffset(m_formWindow, managedWidget);
@@ -426,18 +421,21 @@ bool ObjectInspector::ObjectInspectorPrivate::selectObject(QObject *o)
     if (!m_core->metaDataBase()->item(o))
         return false;
 
-    typedef QSet<QModelIndex> ModelIndexSet;
+    using ModelIndexSet = QSet<QModelIndex>;
 
     const QModelIndexList objectIndexes = indexesOf(o);
-    if (objectIndexes.empty())
+    if (objectIndexes.isEmpty())
         return false;
 
     QItemSelectionModel *selectionModel = m_treeView->selectionModel();
-    const ModelIndexSet currentSelectedItems = selectionModel->selectedRows(0).toSet();
+    const auto currentSelectedItemList = selectionModel->selectedRows(0);
+    const ModelIndexSet currentSelectedItems(currentSelectedItemList.cbegin(), currentSelectedItemList.cend());
 
     // Change in selection?
-    if (!currentSelectedItems.empty() && currentSelectedItems == objectIndexes.toSet())
+    if (!currentSelectedItems.isEmpty()
+        && currentSelectedItems == ModelIndexSet(objectIndexes.cbegin(), objectIndexes.cend())) {
         return true;
+    }
 
     // do select and update
     selectIndexRange(objectIndexes, MakeCurrent);
@@ -446,7 +444,7 @@ bool ObjectInspector::ObjectInspectorPrivate::selectObject(QObject *o)
 
 void ObjectInspector::ObjectInspectorPrivate::selectIndexRange(const QModelIndexList &indexes, unsigned flags)
 {
-    if (indexes.empty())
+    if (indexes.isEmpty())
         return;
 
     QItemSelectionModel::SelectionFlags selectFlags = QItemSelectionModel::Select|QItemSelectionModel::Rows;
@@ -463,13 +461,13 @@ void ObjectInspector::ObjectInspectorPrivate::selectIndexRange(const QModelIndex
             selectFlags &= ~(QItemSelectionModel::Clear|QItemSelectionModel::Current);
         }
     if (flags & MakeCurrent)
-        m_treeView->scrollTo(indexes.front(), QAbstractItemView::EnsureVisible);
+        m_treeView->scrollTo(indexes.constFirst(), QAbstractItemView::EnsureVisible);
 }
 
 void ObjectInspector::ObjectInspectorPrivate::clear()
 {
-    m_formFakeDropTarget = 0;
-    m_formWindow = 0;
+    m_formFakeDropTarget = nullptr;
+    m_formWindow = nullptr;
 }
 
 // Form window cursor is in state 'main container only'
@@ -506,7 +504,7 @@ void ObjectInspector::ObjectInspectorPrivate::setFormWindowBlocked(QDesignerForm
     const int yoffset = m_treeView->verticalScrollBar()->value();
 
     if (formWindowChanged)
-        m_formFakeDropTarget = 0;
+        m_formFakeDropTarget = nullptr;
 
     switch (m_model->update(m_formWindow)) {
     case ObjectInspectorModel::NoForm:
@@ -532,10 +530,10 @@ void ObjectInspector::ObjectInspectorPrivate::setFormWindowBlocked(QDesignerForm
         bool applySelection = !mainContainerIsCurrent(m_formWindow);
         if (!applySelection) {
             const QModelIndexList currentIndexes = m_treeView->selectionModel()->selectedRows(0);
-            if (currentIndexes.empty()) {
+            if (currentIndexes.isEmpty()) {
                 applySelection = true;
             } else {
-                applySelection = selectionType(m_formWindow, objectAt(currentIndexes.front())) == ManagedWidgetSelection;
+                applySelection = selectionType(m_formWindow, objectAt(currentIndexes.constFirst())) == ManagedWidgetSelection;
             }
         }
         if (applySelection)
@@ -594,7 +592,7 @@ void ObjectInspector::ObjectInspectorPrivate::slotSelectionChanged(const QItemSe
 // some index lists are multicolumn ranges
 QObjectVector ObjectInspector::ObjectInspectorPrivate::indexesToObjects(const QModelIndexList &indexes) const
 {
-    if (indexes.empty())
+    if (indexes.isEmpty())
         return  QObjectVector();
     QObjectVector rc;
     rc.reserve(indexes.size());
@@ -642,11 +640,11 @@ void ObjectInspector::ObjectInspectorPrivate::synchronizeSelection(const QItemSe
     const QModelIndexList currentSelectedIndexes = m_treeView->selectionModel()->selectedRows(0);
 
     int deselectedManagedWidgetCount = 0;
-    if (!deselected.empty())
+    if (!deselected.isEmpty())
         deselectedManagedWidgetCount = selectInCursor(m_formWindow, deselected, false);
 
-    if (newlySelected.empty()) { // Nothing selected
-        if (currentSelectedIndexes.empty()) // Do not allow a null-selection, reset to main container
+    if (newlySelected.isEmpty()) { // Nothing selected
+        if (currentSelectedIndexes.isEmpty()) // Do not allow a null-selection, reset to main container
             m_formWindow->clearSelection(!m_withinClearSelection);
         return;
     }
@@ -664,7 +662,7 @@ void ObjectInspector::ObjectInspectorPrivate::synchronizeSelection(const QItemSe
         }
         // And now for the unmanaged selection
         m_formWindow->clearSelection(false);
-        QObject *unmanagedObject = newlySelected.front();
+        QObject *unmanagedObject = newlySelected.constFirst();
         m_core->propertyEditor()->setObject(unmanagedObject);
         m_core->propertyEditor()->setEnabled(true);
         // open container page if it is a single widget
@@ -674,7 +672,7 @@ void ObjectInspector::ObjectInspectorPrivate::synchronizeSelection(const QItemSe
     }
     // Open container page if it is a single widget
     if (newlySelected.size() == 1) {
-        QObject *object = newlySelected.back();
+        QObject *object = newlySelected.constFirst();
         if (object->isWidgetType())
             showContainersCurrentPage(static_cast<QWidget*>(object));
     }
@@ -697,7 +695,7 @@ void ObjectInspector::ObjectInspectorPrivate::getSelection(Selection &s) const
         return;
 
     const QModelIndexList currentSelectedIndexes = m_treeView->selectionModel()->selectedRows(0);
-    if (currentSelectedIndexes.empty())
+    if (currentSelectedIndexes.isEmpty())
         return;
 
     // sort objects
@@ -736,12 +734,12 @@ static inline QMenu *createTaskMenu(QObject *object, QDesignerFormWindowInterfac
     // 3) Mananaged widgets
     if (qdesigner_internal::FormWindowBase *fwb = qobject_cast<qdesigner_internal::FormWindowBase*>(fw))
         return fwb->initializePopupMenu(w);
-    return 0;
+    return nullptr;
 }
 
 void ObjectInspector::ObjectInspectorPrivate::slotPopupContextMenu(QWidget * /*parent*/, const QPoint &pos)
 {
-    if (m_formWindow == 0 || m_formWindow->currentTool() != 0)
+    if (m_formWindow == nullptr || m_formWindow->currentTool() != 0)
         return;
 
     if (QObject *object = objectAt(m_treeView->indexAt(pos))) {
@@ -824,7 +822,7 @@ void ObjectInspector::mainContainerChanged()
 {
     // Invalidate references to objects kept in items
     if (sender() == m_impl->formWindow())
-        setFormWindow(0);
+        setFormWindow(nullptr);
 }
 
 void  ObjectInspector::dragEnterEvent (QDragEnterEvent * event)

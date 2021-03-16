@@ -120,7 +120,7 @@ namespace {
     // on closing (adds missing parentheses).
     class SignatureDelegate : public QItemDelegate {
     public:
-        SignatureDelegate(QObject * parent = 0);
+        SignatureDelegate(QObject * parent = nullptr);
         QWidget * createEditor (QWidget * parent, const QStyleOptionViewItem &option, const QModelIndex &index ) const override;
         void setModelData (QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
 
@@ -189,7 +189,7 @@ namespace {
 
     FakeMethodMetaDBCommand::FakeMethodMetaDBCommand(QDesignerFormWindowInterface *formWindow) :
         qdesigner_internal::QDesignerFormWindowCommand(QApplication::translate("Command", "Change signals/slots"), formWindow),
-        m_object(0)
+        m_object(nullptr)
      {
      }
 
@@ -270,7 +270,7 @@ void SignaturePanel::slotAdd()
         newSlot += QString::number(i); // Always add number, Avoid setting 'slot' for first entry
         newSlot += QLatin1Char('(');
         // check for function name independent of parameters
-        if (m_model->findItems(newSlot, Qt::MatchStartsWith, 0).empty()) {
+        if (m_model->findItems(newSlot, Qt::MatchStartsWith, 0).isEmpty()) {
             newSlot += QLatin1Char(')');
             QStandardItem * item = createEditableItem(newSlot);
             m_model->appendRow(item);
@@ -290,13 +290,13 @@ int SignaturePanel::count(const QString &signature) const
 void SignaturePanel::slotRemove()
 {
     const QModelIndexList selectedIndexes = m_listView->selectionModel()->selectedIndexes ();
-    if (selectedIndexes.empty())
+    if (selectedIndexes.isEmpty())
         return;
 
     closeEditor();
     // scroll to previous
-    if (const int row = selectedIndexes.front().row())
-        m_listView->setCurrentIndex (selectedIndexes.front().sibling(row - 1, 0));
+    if (const int row = selectedIndexes.constFirst().row())
+        m_listView->setCurrentIndex (selectedIndexes.constFirst().sibling(row - 1, 0));
 
     for (int  i = selectedIndexes.size() - 1; i >= 0; i--)
         qDeleteAll(m_model->takeRow(selectedIndexes[i].row()));
@@ -304,14 +304,14 @@ void SignaturePanel::slotRemove()
 
 void SignaturePanel::slotSelectionChanged(const QItemSelection &selected, const QItemSelection &)
 {
-    m_removeButton->setEnabled(!selected.indexes().empty());
+    m_removeButton->setEnabled(!selected.indexes().isEmpty());
 }
 
 void SignaturePanel::setData(const SignalSlotDialogData &d)
 {
     m_model->clear();
 
-    QStandardItem *lastExisting = 0;
+    QStandardItem *lastExisting = nullptr;
     for (const QString &s : d.m_existingMethods) {
         lastExisting = createDisabledItem(s);
         m_model->appendRow(lastExisting);
@@ -455,7 +455,7 @@ bool SignalSlotDialog::editPromotedClass(QDesignerFormEditorInterface *core, con
     if (baseClassName.isEmpty())
         return false;
 
-    QWidget *widget = core->widgetFactory()->createWidget(baseClassName, 0);
+    QWidget *widget = core->widgetFactory()->createWidget(baseClassName, nullptr);
     if (!widget)
         return false;
     const bool rc = editPromotedClass(core, promotedClassName, widget, parent, mode);
