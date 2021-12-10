@@ -85,7 +85,11 @@ QMakeGlobals::QMakeGlobals()
 #endif
 #ifdef Q_OS_DOSLIKE
     dirlist_sep = QLatin1Char(';');
+#ifdef Q_OS_UNIXLIKE
+     dir_sep = QLatin1Char('/');
+#else
     dir_sep = QLatin1Char('\\');
+#endif
 #else
     dirlist_sep = QLatin1Char(':');
     dir_sep = QLatin1Char('/');
