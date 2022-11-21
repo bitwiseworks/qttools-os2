@@ -1305,9 +1305,9 @@ void MainWindow::addToPhraseBook()
             return;
     } else {
         bool okPressed = false;
-        QString selectedPhraseBook = QInputDialog::getItem(this, tr("Add to phrase book"),
-                                tr("Select phrase book to add to"),
-                                phraseBookList, 0, false, &okPressed);
+        selectedPhraseBook = QInputDialog::getItem(this, tr("Add to phrase book"),
+                                                   tr("Select phrase book to add to"),
+                                                   phraseBookList, 0, false, &okPressed);
         if (!okPressed)
             return;
     }
@@ -1363,7 +1363,7 @@ void MainWindow::about()
     const QString description
             = tr("Qt Linguist is a tool for adding translations to Qt applications.");
     const QString copyright
-            = tr("Copyright (C) %1 The Qt Company Ltd.").arg(QStringLiteral("2020"));
+            = tr("Copyright (C) %1 The Qt Company Ltd.").arg(QStringLiteral("2021"));
     box.setText(QStringLiteral("<center><img src=\":/images/icons/linguist-128-32.png\"/></img><p>%1</p></center>"
                                "<p>%2</p>"
                                "<p>%3</p>").arg(version, description, copyright));

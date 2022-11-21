@@ -220,6 +220,7 @@ void tst_generatedOutput::htmlFromCpp()
                    "testqdoc-test-members.html "
                    "testqdoc-testderived.html "
                    "testqdoc-testderived-members.html "
+                   "testqdoc-testderived-obsolete.html "
                    "testqdoc.html");
 }
 
@@ -349,7 +350,8 @@ void tst_generatedOutput::dontDocument()
 {
     testAndCompare("testdata/dontdocument/dontdocument.qdocconf",
                    "dontdocument/classes.html "
-                   "dontdocument/seenclass.html");
+                   "dontdocument/seenclass.html "
+                   "dontdocument/dontdocument.qhp");
 }
 
 void tst_generatedOutput::inheritedQmlPropertyGroups()
