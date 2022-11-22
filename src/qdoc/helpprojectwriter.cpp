@@ -234,7 +234,7 @@ bool HelpProjectWriter::generateSection(HelpProject &project, QXmlStreamWriter &
     if (!node->url().isEmpty() && !(project.includeIndexNodes && !node->url().startsWith("http")))
         return false;
 
-    if (node->isPrivate() || node->isInternal())
+    if (node->isPrivate() || node->isInternal() || node->isDontDocument())
         return false;
 
     if (node->name().isEmpty())
@@ -657,7 +657,9 @@ void HelpProjectWriter::generateProject(HelpProject &project)
     writer.writeStartElement("toc");
     writer.writeStartElement("section");
     const Node *node = qdb_->findPageNodeByTitle(project.indexTitle);
-    if (node == nullptr)
+    if (!node)
+        node = qdb_->findNodeByNameAndType(QStringList(project.indexTitle), &Node::isPageNode);
+    if (!node)
         node = qdb_->findNodeByNameAndType(QStringList("index.html"), &Node::isPageNode);
     QString indexPath;
     if (node)

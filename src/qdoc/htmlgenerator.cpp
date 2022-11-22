@@ -661,7 +661,7 @@ int HtmlGenerator::generateAtom(const Atom *atom, const Node *relative, CodeMark
             if (relative->isExample()) {
                 qDebug() << "GENERATE FILE LIST CALLED" << relative->name() << atom->string();
             } else
-                relative->location().warning(QString("'\\generatelist \1' can only be used with "
+                relative->location().warning(QString("'\\generatelist %1' can only be used with "
                                                      "'\\example' topic command")
                                                      .arg(atom->string()));
         } else if (atom->string() == QLatin1String("classhierarchy")) {
@@ -699,10 +699,10 @@ int HtmlGenerator::generateAtom(const Atom *atom, const Node *relative, CodeMark
             if (cn) {
                 if (!generateGroupList(const_cast<CollectionNode *>(cn)))
                     relative->location().warning(
-                            QString("'\\generatelist \1' group is empty").arg(atom->string()));
+                            QString("'\\generatelist %1' group is empty").arg(atom->string()));
             } else {
                 relative->location().warning(
-                        QString("'\\generatelist \1' no such group").arg(atom->string()));
+                        QString("'\\generatelist %1' no such group").arg(atom->string()));
             }
         }
         break;
@@ -1286,8 +1286,12 @@ void HtmlGenerator::generateCppReferencePage(Aggregate *aggregate, CodeMarker *m
         QString command = "documentation";
         if (aggregate->isClassNode())
             command = "\'\\class\' comment";
-        aggregate->location().warning(
-                tr("No %1 for '%2'").arg(command).arg(aggregate->plainSignature()));
+        if (!ns || ns->isDocumentedHere()) {
+            aggregate->location().warning(
+                    tr("No %1 for '%2'")
+                        .arg(command)
+                        .arg(aggregate->plainSignature()));
+        }
     } else {
         generateExtractionMark(aggregate, DetailedDescriptionMark);
         out() << "<div class=\"descr\">\n" // QTBUG-9504
@@ -1774,8 +1778,8 @@ void HtmlGenerator::generateNavigationBar(const QString &title, const Node *node
                           << Atom(Atom::FormattingRight, ATOM_FORMATTING_LINK) << Atom(itemRight)
                           << Atom(itemLeft) << Atom(Atom::String, title) << Atom(itemRight);
     } else {
-        if (node->isAggregate()) {
-            QStringList groups = static_cast<const Aggregate *>(node)->groupNames();
+        if (node->isPageNode()) {
+            QStringList groups = static_cast<const PageNode *>(node)->groupNames();
             if (groups.length() == 1) {
                 const Node *groupNode =
                         qdb_->findNodeByNameAndType(QStringList(groups[0]), &Node::isGroup);
@@ -2290,8 +2294,8 @@ void HtmlGenerator::generateTableOfContents(const Node *node, CodeMarker *marker
             }
         }
     } else if (sections
-               && (node->isClassNode() || node->isNamespace() || node->isQmlType()
-                   || node->isJsType())) {
+               && (node->isClassNode() || node->isNamespace() || node->isQmlType() ||
+                   node->isJsType() || node->isQmlBasicType() || node->isJsBasicType())) {
         for (const auto &section : qAsConst(*sections)) {
             if (!section.members().isEmpty()) {
                 out() << "<li class=\"level" << sectionNumber << "\"><a href=\"#"
@@ -3981,7 +3985,7 @@ void HtmlGenerator::generateManifestFile(const QString &manifest, const QString 
         // Include tags added via \meta {tag} {tag1[,tag2,...]}
         // within \example topic
         for (const auto &tag : en->doc().metaTagMap().values("tag")) {
-            const auto &tagList = tag.toLower().split(QLatin1Char(','));
+            const auto &tagList = tag.toLower().split(QLatin1Char(','), Qt::SkipEmptyParts);
             tags += QSet<QString>(tagList.cbegin(), tagList.cend());
         }
 

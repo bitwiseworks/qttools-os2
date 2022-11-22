@@ -2436,12 +2436,10 @@ void DocBookGenerator::generateCppReferencePage(Node *node)
     QString title;
     QString rawTitle;
     QString fullTitle;
-    const NamespaceNode *ns = nullptr;
     if (aggregate->isNamespace()) {
         rawTitle = aggregate->plainName();
         fullTitle = aggregate->plainFullName();
         title = rawTitle + " Namespace";
-        ns = static_cast<const NamespaceNode *>(aggregate);
     } else if (aggregate->isClass()) {
         rawTitle = aggregate->plainName();
         QString templateDecl = node->templateDecl();
@@ -2449,6 +2447,8 @@ void DocBookGenerator::generateCppReferencePage(Node *node)
             fullTitle = QString("%1 %2 ").arg(templateDecl, aggregate->typeWord(false));
         fullTitle += aggregate->plainFullName();
         title = rawTitle + QLatin1Char(' ') + aggregate->typeWord(true);
+    } else if (aggregate->isHeader()) {
+        title = fullTitle = rawTitle = aggregate->fullTitle();
     }
 
     QString subtitleText;
@@ -2479,8 +2479,10 @@ void DocBookGenerator::generateCppReferencePage(Node *node)
     }
 
     Sections sections(const_cast<Aggregate *>(aggregate));
-    SectionVector *sectionVector =
-            ns ? &sections.stdDetailsSections() : &sections.stdCppClassDetailsSections();
+    auto *sectionVector =
+            (aggregate->isNamespace() || aggregate->isHeader()) ?
+                    &sections.stdDetailsSections() :
+                    &sections.stdCppClassDetailsSections();
     SectionVector::ConstIterator section = sectionVector->constBegin();
     while (section != sectionVector->constEnd()) {
         bool headerGenerated = false;
@@ -3420,8 +3422,9 @@ void DocBookGenerator::generateAddendum(const Node *node, Addendum type, CodeMar
     case QmlSignalHandler:
     {
         QString handler(node->name());
-        handler[0] = handler[0].toTitleCase();
-        handler.prepend(QLatin1String("on"));
+        int prefixLocation = handler.lastIndexOf('.', -2) + 1;
+        handler[prefixLocation] = handler[prefixLocation].toTitleCase();
+        handler.insert(prefixLocation, QLatin1String("on"));
         writer->writeStartElement(dbNamespace, "para");
         writer->writeCharacters("The corresponding handler is ");
         writer->writeTextElement(dbNamespace, "code", handler);
